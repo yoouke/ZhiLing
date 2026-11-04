@@ -21,6 +21,13 @@ URLS = {
     "get-pip.py": "https://bootstrap.pypa.io/get-pip.py",
     "7zr.exe": "https://www.7-zip.org/a/7zr.exe",
     "lzma.7z": "https://www.7-zip.org/a/lzma2501.7z",
+    "astrbot-src.zip": f"https://api.github.com/repos/AstrBotDevs/AstrBot/zipball/v{ASTRBOT}",
+    "astrbot.zip": f"https://github.com/AstrBotDevs/AstrBot/releases/download/v{ASTRBOT}/AstrBot-v{ASTRBOT}-dashboard.zip",
+    "napcat-node.zip": f"https://github.com/NapNeko/NapCatQQ/releases/download/{NAPCAT}/NapCat.Shell.Windows.Node.zip",
+}
+DIGESTS = {
+    "astrbot.zip": "a09f560c4140b930180f63a4929c885da80e24fb9bbda56619727bd25e985a11",
+    "napcat-node.zip": "51fbb10e7bcd56b0c2a6de86c37811e7518330e48a137ac689ab1e4d8627d3f0",
 }
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,12 +51,18 @@ def scan_for_secrets(root: Path, needles: list[str]) -> list[Path]:
 def download(dl: Path, skip: bool) -> None:
     dl.mkdir(parents=True, exist_ok=True)
     for name, url in URLS.items():
-        if (dl / name).exists() or skip:
+        existing = dl / name
+        expected = DIGESTS.get(name)
+        if existing.exists() and (not expected or hashlib.sha256(existing.read_bytes()).hexdigest() == expected):
             continue
+        if skip:
+            raise FileNotFoundError(f"构建输入缺失或校验失败：{name}，请取消 --skip-download 后重试")
         print("下载", url)
         tmp = dl / (name + ".part")
         with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as f:
             shutil.copyfileobj(r, f)
+        if expected and hashlib.sha256(tmp.read_bytes()).hexdigest() != expected:
+            raise ValueError(f"下载校验失败：{name}")
         tmp.replace(dl / name)
 
 
@@ -87,15 +100,41 @@ def stage_python(dl: Path, py_dir: Path) -> None:
     run([py_dir / "python.exe", dl / "get-pip.py", "-i", PYPI, "--no-warn-script-location", "setuptools", "wheel"])
 
 
+def stage_pack(source: Path, dest: Path) -> None:
+    """Assemble the application configuration, excluding the legacy standalone product."""
+    import personalize
+    shutil.copytree(source, dest)
+    personalize.prepare_pack(dest, blank=True)
+    notices = dest / "third-party"
+    notices.mkdir(exist_ok=True)
+    if (dest / "README.md").exists():
+        shutil.move(str(dest / "README.md"), notices / "config-pack-README.md")
+    for path in dest.glob("*.bat"):
+        path.unlink()
+    for path in (dest / "voice").glob("*.mp3"):
+        path.unlink()
+    (dest / "voice" / "README.md").write_text(
+        "# 声音资源\n\n请配置自己的声音描述或经授权的声音素材；程序不附带固定角色声音示例。\n", encoding="utf-8")
+    script = dest / "tools" / "import_dafeiyu.py"
+    script.rename(dest / "tools" / "import_character.py")
+    (dest / "README.md").write_text(
+        "# 织灵运行配置\n\n请通过织灵主程序创建角色、配置能力并运行服务。\n"
+        "此目录不提供预设人格；组件许可保留在 LICENSE、third-party 及各插件目录。\n", encoding="utf-8")
+
+
 def assemble(stage: Path, dl: Path) -> None:
     import services
     layout = services.Layout(stage)
     stage_python(dl, layout.python.parent)
-    unzip(DOWNLOADS / "astrbot-src.zip", layout.astrbot)
-    unzip(DOWNLOADS / "astrbot.zip", layout.astrbot / "data" / "dist")
-    unzip(DOWNLOADS / "napcat-node.zip", layout.napcat)
-    shutil.copytree(ROOT / "vendor" / "dafeiyu-config-pack", layout.pack)
-    shutil.copytree(ROOT / "app", layout.app, ignore=shutil.ignore_patterns("__pycache__"))
+    unzip(dl / "astrbot-src.zip", layout.astrbot)
+    unzip(dl / "astrbot.zip", layout.astrbot / "data" / "dist")
+    unzip(dl / "napcat-node.zip", layout.napcat)
+    stage_pack(ROOT / "vendor" / "dafeiyu-config-pack", layout.pack)
+    shutil.copytree(ROOT / "app", layout.app,
+                    ignore=lambda directory, names: [n for n in names if n == "__pycache__" or
+                        (Path(directory).name == "img" and n.lower().endswith(".jpg"))])
+    for name in ("THIRD_PARTY_NOTICES.md", "README.md"):
+        shutil.copy2(ROOT / name, stage / name)
     run([layout.python, "-m", "pip", "install", "-i", PYPI, "-r", layout.astrbot / "requirements.txt",
          "--no-warn-script-location"])
 
@@ -124,7 +163,7 @@ def prewarm(stage: Path) -> list[str]:
         data = json.loads(answers.read_text(encoding="utf-8"))
         data.update(memory="0", voice="3")
         answers.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        run([layout.python, "-X", "utf8", layout.pack / "tools" / "import_dafeiyu.py",
+        run([layout.python, "-X", "utf8", personalize.import_tool(layout.pack),
              "--answers", answers, "--result-json", result])
         res = json.loads(result.read_text(encoding="utf-8"))
         # 语音要真实的豆包凭据试念，构建期必然失败；插件本身已装好就够了
@@ -152,6 +191,25 @@ def clean(stage: Path, needles: list[str]) -> None:
         raise SystemExit("stage 里还有敏感串：\n" + "\n".join(map(str, leaks)))
 
 
+def stamp_executable(exe: Path, icon: Path) -> None:
+    """Stamp the actual Windows executable, not only the desktop shortcut."""
+    from PyInstaller.utils.win32 import icon as icons, versioninfo as vi
+    icons.CopyIcons(str(exe), str(icon))
+    info = vi.VSVersionInfo(
+        ffi=vi.FixedFileInfo(filevers=(0, 1, 0, 0), prodvers=(0, 1, 0, 0), flags=2, fileType=1),
+        kids=[vi.StringFileInfo([vi.StringTable("080404B0", [
+            vi.StringStruct("CompanyName", "ZhiLing"),
+            vi.StringStruct("FileDescription", "织灵 AI 虚拟人格应用"),
+            vi.StringStruct("FileVersion", "0.1.0-dev"),
+            vi.StringStruct("InternalName", "ZhiLing"),
+            vi.StringStruct("OriginalFilename", "织灵.exe"),
+            vi.StringStruct("ProductName", "织灵"),
+            vi.StringStruct("ProductVersion", "0.1.0-dev"),
+            vi.StringStruct("LegalCopyright", "组件许可见 THIRD_PARTY_NOTICES.md"),
+        ])]), vi.VarFileInfo([vi.VarStruct("Translation", [0x0804, 1200])])])
+    vi.write_version_info_to_executable(str(exe), info)
+
+
 def package(stage: Path, dl: Path, out: Path) -> Path:
     seven = dl / "7zr.exe"
     boot = WORK / "boot"
@@ -169,12 +227,16 @@ def package(stage: Path, dl: Path, out: Path) -> Path:
     run([seven, "a", WORK / "boot.7z", f"{boot}\\*", "-mx=1"])
     run([seven, "e", dl / "lzma.7z", f"-o{WORK}", "-r", "7zSD.sfx", "-y"])
     out.mkdir(parents=True, exist_ok=True)
+    stub = WORK / "zhiling.sfx"
+    shutil.copy2(WORK / "7zSD.sfx", stub)
+    stamp_executable(stub, stage / "app" / "web" / "img" / "icon.ico")
     exe = out / "织灵.exe"
     with open(exe, "wb") as f:
-        f.write((WORK / "7zSD.sfx").read_bytes())
+        f.write(stub.read_bytes())
         f.write(sfx_config_text().encode("utf-8"))
         with open(WORK / "boot.7z", "rb") as b:
             shutil.copyfileobj(b, f)
+    (out / "SHA256SUMS.txt").write_text(hashlib.sha256(exe.read_bytes()).hexdigest() + "  " + exe.name + "\n", encoding="utf-8")
     return exe
 
 
