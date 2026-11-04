@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
 WORK = ROOT / ".tmp" / "build"
 sys.path.insert(0, str(ROOT / "app"))
+from version import VERSION, WINDOWS_VERSION
 
 
 def sfx_config_text() -> str:
@@ -222,7 +223,7 @@ def audit_payload(stage: Path) -> dict:
         errors.append("预热账号配置或数据库未清理")
     if errors:
         raise SystemExit("安装包审计失败：\n" + "\n".join(errors))
-    return {"product": "织灵", "version": "0.1.0-dev", "fixed_persona": False,
+    return {"product": "织灵", "version": VERSION, "fixed_persona": False,
             "components": {"python": PYTHON, "astrbot": ASTRBOT, "napcat": NAPCAT},
             "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
             "icon_sha256": hashlib.sha256((stage / "app/web/img/icon.ico").read_bytes()).hexdigest(),
@@ -242,15 +243,15 @@ def stamp_executable(exe: Path, icon: Path) -> None:
     group = resources[14][1][0]
     winresource.add_or_update_resource(str(exe), group, 14)
     info = vi.VSVersionInfo(
-        ffi=vi.FixedFileInfo(filevers=(0, 1, 0, 0), prodvers=(0, 1, 0, 0), flags=2, fileType=1),
+        ffi=vi.FixedFileInfo(filevers=WINDOWS_VERSION, prodvers=WINDOWS_VERSION, flags=2, fileType=1),
         kids=[vi.StringFileInfo([vi.StringTable("080404B0", [
             vi.StringStruct("CompanyName", "ZhiLing"),
             vi.StringStruct("FileDescription", "织灵 AI 虚拟人格应用"),
-            vi.StringStruct("FileVersion", "0.1.0-dev"),
+            vi.StringStruct("FileVersion", VERSION),
             vi.StringStruct("InternalName", "ZhiLing"),
             vi.StringStruct("OriginalFilename", "织灵.exe"),
             vi.StringStruct("ProductName", "织灵"),
-            vi.StringStruct("ProductVersion", "0.1.0-dev"),
+            vi.StringStruct("ProductVersion", VERSION),
             vi.StringStruct("LegalCopyright", "组件许可见 THIRD_PARTY_NOTICES.md"),
         ])]), vi.VarFileInfo([vi.VarStruct("Translation", [0x0804, 1200])])])
     vi.write_version_info_to_executable(str(exe), info)
