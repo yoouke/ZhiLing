@@ -465,6 +465,7 @@ async function pageStatus() {
     <div class="group"><h3>改设置</h3><div class="acts">
       <button id="edit-prof">改名字 / 性格 / 声音</button>
       <button id="edit-keys">改 key</button>
+      <button id="agent-settings">Agent 任务</button>
       <button id="switch-qq">退出小号 / 换一个</button>
     </div></div>
     <div class="group"><h3>不用了</h3><div class="acts">
@@ -476,6 +477,7 @@ async function pageStatus() {
   $("#down").onclick = async () => { await api("/api/stop", {}); tick(); };
   $("#edit-keys").onclick = () => { clearTimers(); pageKeys(); };
   $("#edit-prof").onclick = () => { clearTimers(); pageProfile(); };
+  $("#agent-settings").onclick = pageAgent;
   $("#switch-qq").onclick = async () => {
     const yes = await confirmBox({
       title: "退出小号 / 换一个",
@@ -593,12 +595,55 @@ function renderApplying() {
   const ul = $("#tasks");
   if (!ul || !p) return;
   // 只列这次重跑的几步，解压之类早就做完的不用再刷一遍
-  const keys = ["configs", "astrbot", "napcat", "import", "login"];
+  const keys = ["configs", "astrbot", "napcat", "import", "agent", "login"];
   ul.innerHTML = p.steps.filter((s) => keys.includes(s.key)).map((s) => `
     <li class="${s.status}"><span class="ic">${ICON[s.status]}</span><div>${esc(s.title)}
       ${s.status === "error" ? `<div class="t-msg" style="white-space:pre-wrap">${esc(s.message)}</div>` : ""}
     </div></li>`).join("");
   $("#retry").hidden = !p.steps.some((s) => s.status === "error");
+}
+
+// ---------------- Agent 任务 ----------------
+async function pageAgent() {
+  clearTimers();
+  S.page = -2;
+  shell(-1, "Agent 任务", "日常聊天保留角色表达；需要执行任务时，通过 /dsh 交给 Agent。", `
+    <div class="note">首次部署会下载独立运行环境和任务组件，并重启消息服务。仅主人可使用，普通聊天用户不会获得电脑操作权限。工作目录是任务文件位置，不是系统沙箱。</div>
+    <p id="agent-state" role="status">正在检查…</p>
+    <div id="agent-error" class="msg bad" role="alert"></div>
+    <div class="acts">
+      <button class="primary" id="agent-prepare">安装并启用</button>
+      <button id="agent-start">重新联动</button>
+      <button id="agent-stop">暂停任务服务</button>
+    </div>
+    <p><a id="agent-console" target="_blank" rel="noopener" hidden>打开 Agent 控制台</a></p>
+    <details class="note"><summary>任务与审批</summary>
+      <p>发 <code>/dsh 任务内容</code>，结果回到原消息通道。授权和提问保持确认流程，不自动代答。发 <code>/dsh stop</code> 可停止当前任务。</p>
+      <p>任务文件保存在安装目录的 agent-workspace。桥接只监听本机；认证缓存由运行组件保存，不要公开 engines 目录和日志。</p>
+    </details>`, `<button id="agent-back">返回</button>`);
+  const tick = async () => {
+    const r = await api("/api/agent");
+    if (!$("#agent-state")) return;
+    $("#agent-state").textContent = r.busy ? "正在准备 Agent，请稍候…" : r.message || "检查失败";
+    $("#agent-error").textContent = r.error || "";
+    ["prepare", "start", "stop"].forEach(x => $("#agent-" + x).disabled = !!r.busy);
+    $("#agent-prepare").textContent = r.installed ? "修复并启用" : "安装并启用";
+    $("#agent-start").disabled = !!r.busy || !r.installed;
+    $("#agent-stop").disabled = !!r.busy || !r.ready;
+    const link = $("#agent-console");
+    link.hidden = !r.ready;
+    if (r.ready && /^http:\/\/127\.0\.0\.1:\d+$/.test(r.console_url)) link.href = r.console_url;
+  };
+  for (const action of ["prepare", "start", "stop"]) {
+    $("#agent-" + action).onclick = async () => {
+      const r = await api("/api/agent", {action});
+      if (!r.ok) $("#agent-error").textContent = r.message;
+      else await tick();
+    };
+  }
+  $("#agent-back").onclick = pageStatus;
+  await tick();
+  S.timers.push(setInterval(tick, 3000));
 }
 
 // ---------------- 入口 ----------------
