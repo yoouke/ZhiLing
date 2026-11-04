@@ -233,7 +233,7 @@ class InstallerTest(unittest.TestCase):
 
     def test_default_steps_order(self):
         self.assertEqual([s.key for s in installer.default_steps()],
-                         ["extract", "ports", "configs", "astrbot", "napcat", "import", "shortcut", "login"])
+                         ["extract", "ports", "configs", "astrbot", "napcat", "import", "agent", "shortcut", "login"])
 
 
 if __name__ == "__main__":
