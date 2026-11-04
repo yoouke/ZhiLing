@@ -4,14 +4,20 @@
 
 ## Windows 回归
 
-Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。新增 Agent 后完整回归为 **119 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式、部署期间冲突操作保护、空白角色成品配置，以及实际 Windows EXE 图标和中文产品属性。
+Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。0.2.0 完整回归为 **126 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式、部署期间冲突操作保护、空白角色成品配置，以及实际 Windows EXE 图标和中文产品属性。
 
-- [119 项 Windows 原生检查成功记录](https://github.com/yoouke/ZhiLing/actions/runs/41760570729)
+- [126 项 Windows 原生检查与界面交互成功记录](https://github.com/yoouke/ZhiLing/actions/runs/41772064423)
 - [持续集成列表](https://github.com/yoouke/ZhiLing/actions)
 
 中文快捷方式使用实际 Windows Shell Link 保存，测试读取真实文件中的 Unicode 参数，同时核对目标程序、图标和工作目录。不是只检查文件名存在。安装器资源测试读取实际 PE 图标字节，并调用 Windows 版本信息 API 核对产品名与原始文件名。
 
 Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证文件不能通过健康检查；它是协议边界测试，不是 DSH/QQ 真实消息验收。
+
+## 初始化与日常工作台
+
+0.2.0 使用指定的紫色蝴蝶 Logo，重新设计两套桌面界面。自动交互检查在 Windows Edge 中运行真实前端，验证六步向导到工作台的切换、六项日常导航、UTF-8 角色文件原文导入、模型与账号页面、Agent 部署按钮、服务停止、维护确认和 900/700 像素宽窗口下无横向溢出。页面无 JavaScript 异常。
+
+前端交互使用明确的合成服务响应，工作台截图中的角色、QQ 号和在线状态属于测试数据，不能当作 QQ/模型连通证据。初始 API 空白角色及未授权访问检查使用真实本机后端；安装中断、必要文件缺失、未保存 API 配置和安装完成等启动分支通过独立宿主回归检查。
 
 ## 真实引擎部署
 
@@ -41,7 +47,7 @@ Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证�
 - 通过实际 HTTP 请求确认空白角色、没有保存 Key、未经认证的接口访问被拒绝。
 - 使用 Windows Edge 对实际运行页面截图；不是设计效果图，也不是假后端截图。
 
-最终安装包与匹配的成品报告见开发预览发布页。构建记录：https://github.com/yoouke/ZhiLing/actions/runs/41760680340。启动检查：https://github.com/yoouke/ZhiLing/actions/runs/41762030920。发布流程核对安装包、校验文件、构建信息和启动报告的哈希一致后才公开。
+最终安装包与匹配的成品报告见开发预览发布页。0.2.0 构建记录：https://github.com/yoouke/ZhiLing/actions/runs/41793520825。启动检查：https://github.com/yoouke/ZhiLing/actions/runs/41794812655。发布流程核对安装包、校验文件、构建信息和启动报告的哈希一致后才公开。
 
 ## 尚未验收
 
@@ -50,5 +56,7 @@ Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证�
 - 真实模型执行任务，QQ 原通道接收结果、文件和审批。
 - 语音、唱歌、长期记忆等外部 API 的真实授权运行。
 - 多人格、SnowLuma、多平台和其余扩展，见 [验收清单](acceptance.md)。
+
+0.2.0 安装包 SHA-256：`07751d3a04a9f9a50eab7cb4876ca6780fcebac743117955f8eb59b5c61789e1`。
 
 已发布本工程的开发预览安装程序；上述账号、模型与桌面验收仍未完成。
