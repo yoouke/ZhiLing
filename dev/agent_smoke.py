@@ -1,5 +1,6 @@
 """Real Windows DSH deployment/health smoke test. Never calls a model or QQ."""
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -36,6 +37,7 @@ def main():
                 if beacon.exists():
                     value = json.loads(beacon.read_text()).get("token", "")
                     text = text.replace(value, "***") if value else text
+                text = re.sub(r"([?&]token=)[^\s&]+", r"\1***", text)
                 print(text[-10000:])
 
 
