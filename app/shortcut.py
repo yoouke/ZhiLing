@@ -1,7 +1,9 @@
 """在桌面放「启动织灵」快捷方式。用系统自带的 WScript.Shell，不加依赖。"""
 
 import os
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 # 值走环境变量，路径里的引号、空格、中文不会把命令拼坏
@@ -42,11 +44,25 @@ def remove_shortcut(name: str, desktop: Path | None = None) -> None:
 
 def create_shortcut(target: Path, args: str, name: str, icon: Path, desktop: Path | None = None) -> Path:
     """建（或覆盖）桌面快捷方式，返回 .lnk 路径。desktop 只给测试用；默认取系统桌面（含 OneDrive 重定向）。"""
-    env = dict(os.environ, SC_TARGET=str(target), SC_ARGS=args, SC_NAME=name,
-               SC_WORKDIR=str(Path(target).parent), SC_ICON=str(icon), SC_DESKTOP=str(desktop or ""))
-    out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", _PS],
-                         capture_output=True, env=env, timeout=60,
-                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    if out.returncode != 0:
-        raise OSError("建桌面快捷方式失败：" + out.stderr.decode("utf-8", "replace").strip())
-    return Path(out.stdout.decode("utf-8", "replace").strip().splitlines()[-1])
+    destination = desktop_dir(desktop) / f"{name}.lnk"
+    # WScript can fail to save a Unicode filename on non-Chinese Windows.
+    # Create the link in the English-only installation directory, then copy its
+    # bytes and atomically rename with Python's Unicode filesystem APIs.
+    with tempfile.TemporaryDirectory(prefix="zhiling-link-", dir=Path(target).parent) as work:
+        source = Path(work) / "launch.lnk"
+        env = dict(os.environ, SC_TARGET=str(target), SC_ARGS=args, SC_NAME="launch",
+                   SC_WORKDIR=str(Path(target).parent), SC_ICON=str(icon), SC_DESKTOP=work)
+        out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", _PS],
+                             capture_output=True, env=env, timeout=60,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        if out.returncode != 0 or not source.is_file():
+            raise OSError("建桌面快捷方式失败：" + out.stderr.decode("utf-8", "replace").strip())
+        fd, staged_name = tempfile.mkstemp(prefix=".zhiling-", suffix=".lnk", dir=destination.parent)
+        os.close(fd)
+        staged = Path(staged_name)
+        try:
+            shutil.copyfile(source, staged)
+            os.replace(staged, destination)
+        finally:
+            staged.unlink(missing_ok=True)
+    return destination
