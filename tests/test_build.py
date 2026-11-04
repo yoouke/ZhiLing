@@ -13,7 +13,7 @@ class BuildTest(unittest.TestCase):
     def test_sfx_config_text(self):
         text = build.sfx_config_text()
         self.assertTrue(text.startswith(";!@Install@!UTF-8!"))
-        self.assertIn('Title="大肥鱼一键包"', text)
+        self.assertIn('Title="织灵"', text)
         self.assertIn(r'RunProgram="runtime\\python\\pythonw.exe app\\main.py"', text)
         self.assertTrue(text.rstrip().endswith(";!@InstallEnd@!"))
 

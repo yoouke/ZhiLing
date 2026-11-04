@@ -17,8 +17,8 @@ class ShortcutTest(unittest.TestCase):
             icon.write_bytes(b"")
             # 参数里带引号和空格，确认原样写进去
             args = f'"{d / "app" / "main.py"}" --status --root "{d / "大肥 鱼"}"'
-            lnk = shortcut.create_shortcut(target, args, "启动大肥鱼", icon, desktop=d)
-            self.assertEqual(lnk, d / "启动大肥鱼.lnk")
+            lnk = shortcut.create_shortcut(target, args, "启动织灵", icon, desktop=d)
+            self.assertEqual(lnk, d / "启动织灵.lnk")
             self.assertTrue(lnk.exists())
             env = dict(os.environ, LNK=str(lnk))
             out = subprocess.run(
@@ -35,8 +35,8 @@ class ShortcutTest(unittest.TestCase):
     def test_remove_deletes_lnk(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
-            lnk = shortcut.create_shortcut(d / "a.exe", "", "启动大肥鱼", d / "i.ico", desktop=d)
-            shortcut.remove_shortcut("启动大肥鱼", desktop=d)
+            lnk = shortcut.create_shortcut(d / "a.exe", "", "启动织灵", d / "i.ico", desktop=d)
+            shortcut.remove_shortcut("启动织灵", desktop=d)
             self.assertFalse(lnk.exists())
 
     def test_remove_missing_is_ok(self):

@@ -89,7 +89,7 @@ class ServerTest(unittest.TestCase):
         _, info = self.call("/api/info")
         self.assertEqual(info["mode"], "install")
         self.assertEqual(info["default_path"], "D:\\DaFeiYu")
-        self.assertEqual(info["profile"]["name"], "大肥鱼")
+        self.assertEqual(info["profile"]["name"], "")
         self.assertEqual(len(info["voice_presets"]), 3)
 
     def test_error_shows_cause_and_log_path(self):

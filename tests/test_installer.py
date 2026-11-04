@@ -199,7 +199,7 @@ class InstallerTest(unittest.TestCase):
             return mock.Mock(stdout="ok secret-siliconflow", stderr="")
 
         inst = Installer(self.root, st, steps=[])
-        inst.provide("profile", {"name": "小鲸", "persona": "你是大肥鱼", "voice": "甜",
+        inst.provide("profile", {"name": "小鲸", "persona": "你是小鲸", "voice": "甜",
                                  "memes": {"blue-fat-fish-meme-pack": True}})
         with mock.patch.object(installer, "ensure_astrbot"), mock.patch.object(installer.subprocess, "run", fake_run):
             try:

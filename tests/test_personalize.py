@@ -26,15 +26,15 @@ class PersonalizeTest(unittest.TestCase):
 
     def test_default_profile_reads_pack(self):
         p = personalize.default_profile(self.pack)
-        self.assertEqual(p["name"], "大肥鱼")
-        self.assertTrue(p["persona"].startswith("你是大肥鱼"))
-        self.assertIn("憨萌软糯", p["voice"])
+        self.assertEqual(p["name"], "")
+        self.assertEqual(p["persona"], "")
+        self.assertEqual(p["voice"], "")
         self.assertEqual(p["memes"], {"blue-fat-fish-meme-pack": True, "deepseek-fanart-meme-pack": True})
         self.assertEqual(len(personalize.VOICE_PRESETS), 3)
 
     def test_rename_and_voice_written(self):
         p = personalize.default_profile(self.pack)
-        p.update(name="小鲸", voice="温柔的大姐姐", memes={"blue-fat-fish-meme-pack": False, "deepseek-fanart-meme-pack": True})
+        p.update(name="小鲸", persona="你是小鲸，自由创作的人格。", voice="温柔的大姐姐", memes={"blue-fat-fish-meme-pack": False, "deepseek-fanart-meme-pack": True})
         personalize.apply_profile(self.pack, p)
         text = self.persona()
         self.assertTrue(text.startswith("你是小鲸"))
@@ -49,7 +49,7 @@ class PersonalizeTest(unittest.TestCase):
 
     def test_owner_placeholder_restored(self):
         p = personalize.default_profile(self.pack)
-        p["persona"] = "你是小鲸，很懒。"
+        p.update(name="小鲸", voice="温柔自然", persona="你是小鲸，很懒。")
         personalize.apply_profile(self.pack, p)
         self.assertIn("{OWNER_QQ}", self.persona())
 
