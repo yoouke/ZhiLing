@@ -47,6 +47,13 @@ class PersonalizeTest(unittest.TestCase):
         # 关掉的那套不能还是默认主套，否则 meme_manager 默认规则会选到它
         self.assertTrue(next(m for m in pj["meme_packs"] if m["use"])["default"])
 
+    def test_imported_persona_is_not_rewritten_to_a_fixed_character(self):
+        p = personalize.default_profile(self.pack)
+        text = "你叫小鲸。大肥鱼是你的朋友，不是你自己。\n保留用户的原创关系。"
+        p.update(name="小鲸", voice="温柔自然", persona=text)
+        personalize.apply_profile(self.pack, p)
+        self.assertTrue(self.persona().startswith(text + "\n"))
+
     def test_owner_placeholder_restored(self):
         p = personalize.default_profile(self.pack)
         p.update(name="小鲸", voice="温柔自然", persona="你是小鲸，很懒。")
