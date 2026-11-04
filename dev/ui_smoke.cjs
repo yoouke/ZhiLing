@@ -19,14 +19,14 @@ async function main() {
   const connectionFile=path.join(temporary,'connection.json');
   const output=path.resolve('ui-output');fs.mkdirSync(output,{recursive:true});
   const host=spawn('python',['-X','utf8','dev/ui_fixture.py','--connection',connectionFile],{stdio:'ignore'});
-  let browser;
+  let browser, page;
   try {
     await waitFor(()=>fs.existsSync(connectionFile));
     const connection=JSON.parse(fs.readFileSync(connectionFile,'utf8'));secret=connection.token;
     const base=`http://127.0.0.1:${connection.port}`;
     browser=await chromium.launch({channel:'msedge',headless:true});
     const context=await browser.newContext({viewport:{width:1280,height:900},deviceScaleFactor:1});
-    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
     const real=await context.request.get(base+'/api/info',{headers:{'X-Token':secret}});
     const info=await real.json();
     expect.equal(info.mode,'install');expect.equal(info.profile.persona,'');
@@ -42,7 +42,7 @@ async function main() {
       else if(name==='/api/check')data={ok:true,message:'界面测试连接',audio_b64:''};
       else if(name==='/api/keys'){info.saved_keys=['deepseek','siliconflow','app_id','token'];data={ok:true};}
       else if(name==='/api/profile'){info.profile=body;stage='deploying';data={ok:true};}
-      else if(name==='/api/progress')data={running:stage==='deploying',waiting:null,finished:stage==='complete',steps:steps.map(key=>({key,title:key,status:stage==='login'&&key==='login'?'doing':stage==='deploying'?'todo':'done',message:''}))};
+      else if(name==='/api/progress')data={running:stage==='deploying',waiting:null,finished:stage==='complete',steps:steps.map(key=>({key,title:key,status:stage==='login'&&key==='login'?'doing':['fresh','deploying'].includes(stage)?'todo':'done',message:''}))};
       else if(name==='/api/login'){stage='complete';data={status:'online',error:''};}
       else if(name==='/api/finish'){expect.equal(stage,'complete');info.mode='status';data={ok:true};}
       else if(name==='/api/status')data={astrbot:running,napcat:running,starting:false,login:running?'online':'offline',qq:'12345678',agent_preparing:false,error:'',steps:[]};
@@ -108,6 +108,6 @@ async function main() {
     expect.deepEqual(errors,[]);
     fs.writeFileSync(path.join(output,'UI_REPORT.json'),JSON.stringify({setup_to_workspace:true,distinct_navigation:true,prompt_import_preserved:true,service_controls:true,maintenance_confirmation:true,responsive_layout:true,page_errors:errors,scope:'真实前端的合成交互测试；服务状态为测试数据，未验证真实QQ或模型连接'},null,2));
     console.log('UI interaction, setup transition, workspace controls and responsive checks passed.');
-  } finally {if(browser)await browser.close();host.kill();fs.rmSync(temporary,{recursive:true,force:true});}
+  } catch(error) { if(page) await page.screenshot({path:path.join(output,'failure.png')}).catch(()=>{}); throw error; } finally {if(browser)await browser.close();host.kill();fs.rmSync(temporary,{recursive:true,force:true});}
 }
 main().catch(e=>{console.error(String(e.stack||e).replaceAll(secret||'__no_token__','[redacted]'));process.exitCode=1;});
