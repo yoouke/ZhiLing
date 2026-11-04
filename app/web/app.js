@@ -45,13 +45,12 @@ function clearTimers() {
 function shell(page, title, sub, bodyHtml, footHtml) {
   const steps = PAGES.map((n, i) =>
     `<li class="${i === page ? "on" : i < page ? "past" : ""}"><span class="n">${i < page ? "✓" : i + 1}</span>${n}</li>`).join("");
-  const name = S.info?.profile?.name || "你的角色";
   $("#app").innerHTML = `
   <div class="shell">
     <aside class="side">
       <div class="brand">织灵<small>让想象，成为日常。</small></div>
       <img class="avatar zhiling-mark" src="/img/logo.png" alt="织灵">
-      <div class="bubble">${esc((page < 0 ? STATUS_SAY : SAYS[Math.max(page, 0)]).replace("大肥鱼", name))}</div>
+      <div class="bubble">${esc(page < 0 ? STATUS_SAY : SAYS[Math.max(page, 0)])}</div>
       ${page >= 0 && S.mode === "install" ? `<ol class="steps">${steps}</ol>` : ""}
     </aside>
     <main class="main">
@@ -253,7 +252,7 @@ function pageKeys() {
 }
 
 // ---------------- 第 3 页：个性化 ----------------
-const MEME_NAMES = { "blue-fat-fish-meme-pack": "蓝色大肥鱼（157 张）", "deepseek-fanart-meme-pack": "DeepSeek 二创（174 张）" };
+const MEME_NAMES = { "blue-fat-fish-meme-pack": "蓝色角色表情包（157 张）", "deepseek-fanart-meme-pack": "DeepSeek 二创（174 张）" };
 
 function pageProfile() {
   S.page = 2;
