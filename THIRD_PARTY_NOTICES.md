@@ -9,3 +9,10 @@
 既有角色、表情包与声音素材版权归相应权利人。创建页面不默认加载固定人格。织灵图标采用用户确认的紫色蝴蝶作品。
 
 这里记录组件与许可，不构成所有素材可任意商业使用或再分发的声明。
+
+Agent 部署使用 Node.js（保留分发包许可证）、DeepSeek Harness（MIT）、pnpm（MIT）和 dsh-astrbot-ingress / astrbot_plugin_dsh（MIT，CCYellowStar2）。组件通过官方运行时下载地址和 npm 安装，保留各自包内许可证。来源：
+
+- https://nodejs.org/
+- https://github.com/deepseek-ai/deepseek-harness
+- https://github.com/pnpm/pnpm
+- https://github.com/CCYellowStar2/dsh-astrbot-ingress
