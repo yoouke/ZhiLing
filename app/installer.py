@@ -15,7 +15,7 @@ import personalize
 import services
 from store import State, redact
 
-BUSY_HINT = "出了点问题，点「重试」；还不行，把安装目录里的 logs 文件夹发给 UP 主"
+BUSY_HINT = "出了点问题，点「重试」；还不行，请查看安装目录中的运行日志"
 
 
 class InstallError(Exception):
@@ -49,7 +49,7 @@ class Ctx:
 class Installer:
     def __init__(self, root: Path, state: State, steps: list[Step] | None = None, boot: Path | None = None,
                  resume: bool = True):
-        """resume=False：不看 state 里的完成记录，每步都跑（状态页「让她上线」用）。"""
+        """resume=False：不看 state 里的完成记录，每步都跑（状态页「启动服务」用）。"""
         self.root = Path(root)
         self.state = state
         self.steps = steps if steps is not None else default_steps()
@@ -231,7 +231,7 @@ def ensure_astrbot(ctx: Ctx) -> None:
     if not services.is_running(ctx.state.data.get("pids", {}).get("astrbot")):
         services.start_astrbot(ctx.layout, ctx.state)
     if not services.wait_http(_urls(ctx.state)["dashboard"], 300):
-        raise InstallError("AstrBot 五分钟都没启动起来。点重试；还不行，把 logs 文件夹发给 UP 主")
+        raise InstallError("AstrBot 五分钟都没启动起来。点重试；还不行，请查看运行日志")
 
 
 def ensure_napcat(ctx: Ctx) -> None:
@@ -308,7 +308,7 @@ def default_steps() -> list[Step]:
         Step("extract", "解压运行环境和程序", step_extract),
         Step("ports", "准备端口和密码", step_ports),
         Step("configs", "写入你的 key 和连接设置", step_configs),
-        Step("astrbot", "启动 AstrBot（她的大脑）", ensure_astrbot),
+        Step("astrbot", "启动角色与通信服务", ensure_astrbot),
         Step("napcat", "启动 NapCat（登 QQ 用）", ensure_napcat),
         Step("import", "装上人设、插件、表情包、语音、记忆", step_import),
         Step("agent", "检查已启用的 Agent 引擎与桥接", ensure_agent),
