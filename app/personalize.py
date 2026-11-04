@@ -19,11 +19,12 @@ def _read_json(path: Path) -> dict:
 def default_profile(pack_dir: Path) -> dict:
     pack = _read_json(pack_dir / PACK_JSON)
     return {
-        "name": DEFAULT_NAME,
-        "persona": (pack_dir / PERSONA).read_text(encoding="utf-8-sig"),
-        "voice": pack["voice"]["doubao"]["persona"],
+        "name": "",
+        "persona": "",
+        "voice": "",
         "memes": {m["id"]: m.get("use", True) for m in pack["meme_packs"]},
     }
+
 
 
 def fix_plugin_imports(astrbot_data: Path) -> None:
@@ -62,7 +63,6 @@ def apply_profile(pack_dir: Path, profile: dict) -> None:
     persona = profile["persona"].strip()
     memes = profile["memes"]
 
-    persona = persona.replace(DEFAULT_NAME, name)
     if "{OWNER_QQ}" not in persona:
         # 导入工具靠这个占位写入主人 QQ；用户删了就补回来，不然她认不出主人
         persona += "\n\n主人的 QQ 号是 {OWNER_QQ}。消息里的 User ID 是这个号，才是主人本人。"

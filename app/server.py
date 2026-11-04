@@ -223,7 +223,7 @@ class App:
                 "username": "dafeiyu", "password": self.state.get_secret("dashboard_password"),
                 "qq": self.state.data.get("qq", "")}
         (self.root / "我的信息.txt").write_text(
-            "大肥鱼后台（改设置用，别发给别人）\n"
+            "织灵管理信息（请勿分享）\n"
             f"地址：{info['dashboard_url']}\n账号：{info['username']}\n密码：{info['password']}\n", encoding="utf-8")
         return info
 

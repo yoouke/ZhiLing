@@ -16,7 +16,7 @@ DEFAULT_VOICE = "一个憨萌软糯的小女生，声音甜甜的、有点奶，
 
 
 def default_install_path() -> str:
-    return "D:\\DaFeiYu" if os.path.exists("D:\\") else "C:\\DaFeiYu"
+    return "D:\\ZhiLing" if os.path.exists("D:\\") else "C:\\ZhiLing"
 
 
 def check_install_path(path: str, min_free_gb: float = 10) -> str | None:
@@ -24,10 +24,10 @@ def check_install_path(path: str, min_free_gb: float = 10) -> str | None:
     if not path:
         return "先选一个安装位置"
     if not path.isascii() or " " in path:
-        return "路径里不能有中文和空格，换一个，比如 D:\\DaFeiYu"
+        return "路径里不能有中文和空格，换一个，比如 D:\\ZhiLing"
     p = Path(path)
     if not p.is_absolute() or not p.drive:
-        return "要写完整路径，比如 D:\\DaFeiYu"
+        return "要写完整路径，比如 D:\\ZhiLing"
     if p.exists():
         if not p.is_dir():
             return "这是个文件，不是文件夹，换一个"

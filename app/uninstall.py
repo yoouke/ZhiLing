@@ -14,7 +14,7 @@ import services
 import shortcut
 from store import app_home
 
-SHORTCUT_NAME = "启动大肥鱼"
+SHORTCUT_NAME = "启动织灵"
 
 _BAT = r"""@echo off
 chcp 65001 >nul
@@ -41,7 +41,7 @@ _REMOVE = '  rmdir /s /q "{path}" 2>nul'
 def leftovers(root: Path, state, home: Path | None = None) -> list[Path]:
     """卸载要清掉的目录。
 
-    除了安装目录和 %LOCALAPPDATA%\\DaFeiYu，NapCat 登小号时还会在用户的 QQ 数据目录里留下
+    除了安装目录和 %LOCALAPPDATA%\\ZhiLing，NapCat 登小号时还会在用户的 QQ 数据目录里留下
     按号存的那份数据和一个 NapCat 自己的缓存目录，留着就不算卸干净。nt_qq\\global 是主人自己
     QQ 客户端共用的，和主人的号一样绝对不碰。
     """

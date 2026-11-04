@@ -39,7 +39,7 @@ def open_window(url: str, profile_dir: Path) -> None:
         subprocess.Popen([edge, f"--app={url}", "--window-size=1000,740", f"--user-data-dir={profile_dir}",
                           "--no-first-run", "--disable-features=Translate"])
     else:
-        webbrowser.open(url)
+        raise RuntimeError("未找到 Microsoft Edge。请安装 Edge 后重新启动织灵。")
 
 
 def existing_instance(lock: Path) -> str | None:

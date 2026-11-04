@@ -49,8 +49,8 @@ def redact(text: str, secrets: Iterable[str]) -> str:
 
 
 def app_home(home: Path | None = None) -> Path:
-    """记「上次装在哪」的地方：%LOCALAPPDATA%\\DaFeiYu（一键包本身每次从临时目录运行）。"""
-    return Path(home) if home else Path(os.environ.get("LOCALAPPDATA", Path.home())) / "DaFeiYu"
+    """记「上次装在哪」的地方：%LOCALAPPDATA%\\ZhiLing（一键包本身每次从临时目录运行）。"""
+    return Path(home) if home else Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ZhiLing"
 
 
 def remember_install(root: Path, home: Path | None = None) -> None:

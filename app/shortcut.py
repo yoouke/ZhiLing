@@ -1,4 +1,4 @@
-"""在桌面放「启动大肥鱼」快捷方式。用系统自带的 WScript.Shell，不加依赖。"""
+"""在桌面放「启动织灵」快捷方式。用系统自带的 WScript.Shell，不加依赖。"""
 
 import os
 import subprocess

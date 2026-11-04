@@ -279,7 +279,7 @@ def step_import(ctx: Ctx) -> None:
 def step_shortcut(ctx: Ctx) -> None:
     import shortcut
     shortcut.create_shortcut(ctx.layout.pythonw, f'"{ctx.layout.app / "main.py"}" --status --root "{ctx.root}"',
-                             "启动大肥鱼", ctx.layout.app / "web" / "img" / "icon.ico")
+                             "启动织灵", ctx.layout.app / "web" / "img" / "icon.ico")
 
 
 def step_login(ctx: Ctx) -> None:
@@ -302,6 +302,6 @@ def default_steps() -> list[Step]:
         Step("astrbot", "启动 AstrBot（她的大脑）", ensure_astrbot),
         Step("napcat", "启动 NapCat（登 QQ 用）", ensure_napcat),
         Step("import", "装上人设、插件、表情包、语音、记忆", step_import),
-        Step("shortcut", "在桌面放「启动大肥鱼」", step_shortcut),
+        Step("shortcut", "在桌面放「启动织灵」", step_shortcut),
         Step("login", "等你扫码登录小号", step_login),
     ]
