@@ -4,9 +4,9 @@
 
 ## Windows 回归
 
-Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。新增 Agent 后完整回归为 **118 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式、部署期间冲突操作保护、空白角色成品配置，以及实际 Windows EXE 图标和中文产品属性。
+Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。新增 Agent 后完整回归为 **119 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式、部署期间冲突操作保护、空白角色成品配置，以及实际 Windows EXE 图标和中文产品属性。
 
-- [118 项 Windows 原生检查成功记录](https://github.com/yoouke/ZhiLing/actions/runs/41756104737)
+- [119 项 Windows 原生检查成功记录](https://github.com/yoouke/ZhiLing/actions/runs/41760570729)
 - [持续集成列表](https://github.com/yoouke/ZhiLing/actions)
 
 中文快捷方式使用实际 Windows Shell Link 保存，测试读取真实文件中的 Unicode 参数，同时核对目标程序、图标和工作目录。不是只检查文件名存在。安装器资源测试读取实际 PE 图标字节，并调用 Windows 版本信息 API 核对产品名与原始文件名。
@@ -30,6 +30,19 @@ Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证�
 
 这项检查不调用模型、不登录 QQ、不运行 AstrBot 通信服务。通信端验证的是插件文件及默认配置已经准备好；不能将其写成 QQ 已收到任务执行结果。
 
+## 成品构建与首次启动
+
+安装包由本工程在 Windows runner 实际组装，自动下载运行环境、启动通信后台并准备基础插件及资源。发布前检查内容包括：
+
+- 固定人格、旧角色声音样本、旧插图和旧独立启动脚本不进入成品。
+- 清除构建期账号、会话配置、数据库及临时凭据，保留组件许可。
+- 核对真实 EXE 的中文产品属性与图标，检验自解压压缩包和 SHA-256。
+- 解压实际 EXE 及内层 payload，用包内 Python 启动首次安装服务。
+- 通过实际 HTTP 请求确认空白角色、没有保存 Key、未经认证的接口访问被拒绝。
+- 使用 Windows Edge 对实际运行页面截图；不是设计效果图，也不是假后端截图。
+
+最终安装包与匹配的成品报告见开发预览发布页。构建记录：https://github.com/yoouke/ZhiLing/actions/runs/41760680340。启动检查：https://github.com/yoouke/ZhiLing/actions/runs/41762030920。发布流程核对安装包、校验文件、构建信息和启动报告的哈希一致后才公开。
+
 ## 尚未验收
 
 - Win10/11 干净系统的整包安装、独立窗口交互及卸载。
@@ -38,4 +51,4 @@ Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证�
 - 语音、唱歌、长期记忆等外部 API 的真实授权运行。
 - 多人格、SnowLuma、多平台和其余扩展，见 [验收清单](acceptance.md)。
 
-本工程尚未发布新的 Windows 安装包。CI 的成功不能替代上述账号、模型与桌面验收。
+已发布本工程的开发预览安装程序；上述账号、模型与桌面验收仍未完成。
