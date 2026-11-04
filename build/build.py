@@ -1,4 +1,4 @@
-"""维护者用：组装并打出 dist/大肥鱼一键包.exe。需要联网、Windows，中间文件全在 .tmp/build/。
+"""维护者用：组装并打出 dist/织灵.exe。需要联网、Windows，中间文件全在 .tmp/build/。
 
 python build/build.py [--skip-download] [--out dist]
 """
@@ -169,7 +169,7 @@ def package(stage: Path, dl: Path, out: Path) -> Path:
     run([seven, "a", WORK / "boot.7z", f"{boot}\\*", "-mx=1"])
     run([seven, "e", dl / "lzma.7z", f"-o{WORK}", "-r", "7zSD.sfx", "-y"])
     out.mkdir(parents=True, exist_ok=True)
-    exe = out / "大肥鱼一键包.exe"
+    exe = out / "织灵.exe"
     with open(exe, "wb") as f:
         f.write((WORK / "7zSD.sfx").read_bytes())
         f.write(sfx_config_text().encode("utf-8"))
