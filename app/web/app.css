@@ -199,3 +199,5 @@ button.danger:hover { background: #cf3b40; }
   .side { display: none; }
   .grid2 { grid-template-columns: 1fr; }
 }
+
+.zhiling-mark {object-fit:contain!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}

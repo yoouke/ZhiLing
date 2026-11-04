@@ -1,5 +1,5 @@
 "use strict";
-// 大肥鱼一键包向导。没有构建步骤，纯原生 JS。
+// 织灵向导。没有构建步骤，纯原生 JS。
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -25,9 +25,9 @@ api("/api/ping", {});
 const PAGES = ["选位置", "填 key", "个性化", "安装", "扫码", "完成"];
 const PICS = ["wave", "smile", "wink", "hug", "night", "wave"];
 const SAYS = [
-  "嗨，我是大肥鱼。帮我在你电脑上找个窝吧",
+  "从这里开始，创造属于你的角色。",
   "这几把钥匙是我的饭票，别给别人看哦",
-  "想让我变成什么样子都行，不改也可以",
+  "由你决定角色是谁、如何表达。",
   "在搬家啦，等我一下下",
   "用你的 QQ 小号扫一下，我就住进去了",
   "搞定！快去 QQ 找我玩",
@@ -45,12 +45,12 @@ function clearTimers() {
 function shell(page, title, sub, bodyHtml, footHtml) {
   const steps = PAGES.map((n, i) =>
     `<li class="${i === page ? "on" : i < page ? "past" : ""}"><span class="n">${i < page ? "✓" : i + 1}</span>${n}</li>`).join("");
-  const name = S.info?.profile?.name || "大肥鱼";
+  const name = S.info?.profile?.name || "你的角色";
   $("#app").innerHTML = `
   <div class="shell">
     <aside class="side">
-      <div class="brand">${esc(name)}一键包<small>把 DeepSeek 养进 QQ</small></div>
-      <img class="avatar" src="/img/${PICS[Math.max(page, 0)]}.jpg" alt="">
+      <div class="brand">织灵<small>让想象，成为日常。</small></div>
+      <img class="avatar zhiling-mark" src="/img/logo.png" alt="织灵">
       <div class="bubble">${esc((page < 0 ? STATUS_SAY : SAYS[Math.max(page, 0)]).replace("大肥鱼", name))}</div>
       ${page >= 0 && S.mode === "install" ? `<ol class="steps">${steps}</ol>` : ""}
     </aside>
@@ -116,20 +116,12 @@ function pagePath() {
   S.page = 0;
   shell(0, "欢迎", "装好以后，她就住在你的 QQ 小号里，用 DeepSeek 当脑子，会发表情包、发语音、记得你说过的事。", `
     <div class="warn"><b>请用 QQ 小号，别用常用的号。</b>用第三方程序登 QQ 有被限制功能或封号的风险，新号更容易被风控掉线。</div>
-    <div class="note"><b>关于本包内容与授权</b><br>
-      本包为非商业的整合安装工具，内含以下第三方组件，各自版权与许可归原作者所有：
-      <br>· <b>AstrBot</b>（AGPL-3.0）· <b>NapCat</b>（QQ 协议适配）· <b>Python</b>（PSF）· <b>大肥鱼配置包</b>（MIT）
-      <br>内置的人设文字、立绘与表情包素材，版权属于各自的创作者，仅供个人学习与自用。
-      <b>请勿将本包或其中素材用于商业用途、二次售卖或再分发。</b>
-      如你是素材权利人并希望移除，请联系整合包作者。
-      <br>各组件完整许可证见安装目录下的 <code>pack\\LICENSE</code> 与 <code>astrbot\\LICENSE</code>。
-      继续安装即表示你已知悉并同意上述条款，并自行承担使用第三方 QQ 客户端的账号风险。
-    </div>
+    <details class="note"><summary>许可与组件信息</summary><p>组件与素材分别遵循各自许可。完整信息见随附 THIRD_PARTY_NOTICES.md 和组件目录中的许可证。账号登录与 API 授权由你完成。</p></details>
     <label class="field">
       <span>装在哪</span>
       <input id="path" type="text" value="${esc(S.info.default_path)}" spellcheck="false" autocomplete="off">
     </label>
-    <div class="note">要留出 10G 左右的空间。路径只能用英文、不能有空格，比如 <code>D:\\DaFeiYu</code>。以前装过的，填同一个位置会接着上次的进度。</div>
+    <div class="note">要留出 10G 左右的空间。路径只能用英文、不能有空格，比如 <code>D:\\ZhiLing</code>。以前装过的，填同一个位置会接着上次的进度。</div>
     <div id="msg" class="msg" role="alert"></div>`,
     `<span></span><button class="primary" id="go">开始安装</button>`);
   const go = async () => {
@@ -167,7 +159,7 @@ const HELP = {
     按语音时长收费，约 1 元/分钟，一条语音几分钱。`,
   siliconflow: `<ol>
     <li>打开 <a href="https://www.siliconflow.cn/" target="_blank">siliconflow.cn</a> 注册并登录。</li>
-    <li>左侧「API 密钥」→「新建 API 密钥」，描述填「大肥鱼记忆」。</li>
+    <li>左侧「API 密钥」→「新建 API 密钥」，描述填「织灵记忆」。</li>
     <li>点那一行的「密钥（点击复制）」，粘到这里。</li></ol>
     记忆用的 <code>BAAI/bge-m3</code> 模型是免费的。`,
 };
@@ -270,9 +262,9 @@ function pageProfile() {
     `<button class="chip${v.voice === p.voice ? " on" : ""}" data-i="${i}" type="button">${esc(v.name)}</button>`).join("");
   const memes = Object.entries(p.memes).map(([id, on]) =>
     `<label><input type="checkbox" data-meme="${esc(id)}" ${on ? "checked" : ""}> ${esc(MEME_NAMES[id] || id)}</label>`).join("");
-  shell(2, "她是什么样的", "都有默认值，不想改直接点「下一步」。以后在「启动大肥鱼」里也能改。", `
+  shell(2, "她是什么样的", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
     <label class="field"><span>名字</span><input id="name" type="text" maxlength="20" value="${esc(p.name)}"></label>
-    <label class="field"><span>性格（直接用大白话改）</span><textarea id="persona" rows="7">${esc(p.persona)}</textarea></label>
+    <label class="field"><span>人格设定（描述或粘贴提示词）</span><textarea id="persona" rows="7">${esc(p.persona)}</textarea></label>
     <div class="note" style="margin-top:-8px">里面的 <code>{OWNER_QQ}</code> 别删，装的时候会换成你的 QQ 号，她靠这个认主人。</div>
     <label class="field"><span>声音（用一句话描述她的声音）</span>
       <div class="row"><input id="voice" type="text" value="${esc(p.voice)}"><button id="listen" type="button">▶ 试听</button></div>
@@ -443,9 +435,9 @@ async function pageDone() {
   S.page = 5;
   clearTimers();
   const d = await api("/api/done");
-  const name = S.info.profile?.name || "大肥鱼";
+  const name = S.info.profile?.name || "你的角色";
   shell(5, `${esc(name)}上线了`, "用你的大号私聊小号，说句「在吗」试试。", `
-    <div class="note">桌面放了一个「启动大肥鱼」。电脑重启后双击它，她就会重新上线（登录没失效就不用再扫码）。<br>
+    <div class="note">桌面放了一个「启动织灵」。电脑重启后双击它，她就会重新上线（登录没失效就不用再扫码）。<br>
     电脑睡眠或关机时她就下线了，笔记本记得关掉自动睡眠。</div>
     <dl class="info">
       <dt>后台地址</dt><dd>${esc(d.dashboard_url)}</dd>
@@ -461,7 +453,7 @@ async function pageDone() {
 async function pageStatus() {
   clearTimers();
   S.page = -1;
-  const name = S.info.profile?.name || "大肥鱼";
+  const name = S.info.profile?.name || "你的角色";
   shell(-1, esc(name), "她住在你电脑里。关掉这个窗口不影响她在线。", `
     <div class="status-big"><span class="dot" id="sdot"></span><span id="stext">看看她在不在…</span></div>
     <div id="sqr" hidden>${qrBlock()}</div>
@@ -502,13 +494,13 @@ async function pageStatus() {
     const yes = await confirmBox({
       title: "停掉她并退出",
       body: `<p>她会下线，后台也一起关掉，不再占电脑资源。</p>
-        <div class="note">什么都不会删。想让她回来，双击桌面的「启动大肥鱼」。</div>`,
+        <div class="note">什么都不会删。想让她回来，双击桌面的「启动织灵」。</div>`,
       ok: "停掉并退出",
     });
     if (!yes) return;
     await api("/api/quit", {});
     shell(-1, "她下线了", "已经全部停掉。", `
-      <div class="note">想让她回来，双击桌面的「启动大肥鱼」。这个窗口可以关了。</div>`,
+      <div class="note">想让她回来，双击桌面的「启动织灵」。这个窗口可以关了。</div>`,
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
     $("#fin").onclick = () => window.close();
   };
@@ -521,7 +513,7 @@ async function pageStatus() {
         <ul class="bullets">
           <li>安装目录 <code>${esc(S.info.root || "")}</code> 里的全部文件</li>
           <li>她的聊天记忆、表情包、你填的 key</li>
-          <li>桌面上的「启动大肥鱼」图标</li>
+          <li>桌面上的「启动织灵」图标</li>
           <li>小号的登录状态和它在这台电脑上的聊天数据</li>
         </ul>
         <div class="note">不装注册表、不设环境变量、不加开机自启，所以删完就真没了。<br>
