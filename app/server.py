@@ -15,6 +15,7 @@ import installer
 import personalize
 import services
 from store import State, app_home, last_install, remember_install
+from version import VERSION
 
 WEB = Path(__file__).resolve().parent / "web"
 MAX_BODY = 1024 * 1024
@@ -98,7 +99,9 @@ class App:
     def handle_info(self, _q) -> dict:
         profile = (self.state.data.get("profile") if self.state else None) or \
             personalize.default_profile(self.pack_dir())
-        return {"mode": self.mode, "default_path": last_install(self.home) or self.checks.default_install_path(),
+        return {"mode": self.mode, "version": VERSION,
+                "resume": {"keys": bool(self.state and self.state.data.get("keys_ok")),
+                           "profile": bool(self.state and self.state.data.get("profile"))}, "default_path": last_install(self.home) or self.checks.default_install_path(),
                 "root": str(self.root) if self.root else None, "profile": profile,
                 "owner_qq": self.state.data.get("owner_qq", "") if self.state else "",
                 # 改设置时这几项留空就是不改，界面上要能提示「已保存」
@@ -191,6 +194,23 @@ class App:
                                                                 "finished": False}
         return p
 
+    def handle_resume(self, _b) -> dict:
+        if self.mode != "install" or not self.installer:
+            return {"ok": False, "message": "没有需要继续的初始化"}
+        self.installer.start()
+        return {"ok": True, "resume": self.handle_info({})["resume"]}
+
+    def handle_finish(self, _b) -> dict:
+        if not self.installer or not self.installer.progress()["finished"] or not installer.installation_ready(self.root):
+            return {"ok": False, "message": "初始化尚未完成，请先处理未完成的步骤"}
+        self.mode = "status"
+        return {"ok": True}
+
+    def handle_consoles(self, _q) -> dict:
+        ports = self.state.data.get("ports", {})
+        return {"dashboard_url": f"http://127.0.0.1:{ports['dashboard']}" if ports.get("dashboard") else "",
+                "napcat_url": f"http://127.0.0.1:{ports['napcat_webui']}" if ports.get("napcat_webui") else ""}
+
     def handle_retry(self, _b) -> dict:
         self.installer.retry()
         return {"ok": True}
@@ -226,9 +246,6 @@ class App:
         info = {"dashboard_url": f"http://127.0.0.1:{self.state.data['ports']['dashboard']}",
                 "username": configs.dashboard_user(self.layout.astrbot_data), "password": self.state.get_secret("dashboard_password"),
                 "qq": self.state.data.get("qq", "")}
-        (self.root / "我的信息.txt").write_text(
-            "织灵管理信息（请勿分享）\n"
-            f"地址：{info['dashboard_url']}\n账号：{info['username']}\n密码：{info['password']}\n", encoding="utf-8")
         return info
 
     # ---------- 状态页 ----------
@@ -251,7 +268,8 @@ class App:
         self.remember_qq(login)
         return {"astrbot": services.is_running(pids.get("astrbot")), "napcat": services.is_running(pids.get("napcat")),
                 "login": login, "starting": starting,
-                "agent_preparing": bool(self._agent_worker and self._agent_worker.is_alive()), "error": err, "qq": self.state.data.get("qq") or ""}
+                "agent_preparing": bool(self._agent_worker and self._agent_worker.is_alive()),
+                "steps": self._starter.progress()["steps"] if self._starter else [], "error": err, "qq": self.state.data.get("qq") or ""}
 
     def handle_start(self, _b) -> dict:
         if self._agent_worker and self._agent_worker.is_alive():
@@ -358,8 +376,8 @@ class App:
         return {"ok": True}
 
     GET = {"/api/info": handle_info, "/api/progress": handle_progress, "/api/login": handle_login,
-           "/api/done": handle_done, "/api/status": handle_status, "/api/agent": handle_agent_status}
-    POST = {"/api/path": handle_path, "/api/check": handle_check, "/api/keys": handle_keys,
+           "/api/done": handle_done, "/api/consoles": handle_consoles, "/api/status": handle_status, "/api/agent": handle_agent_status}
+    POST = {"/api/resume": handle_resume, "/api/finish": handle_finish, "/api/path": handle_path, "/api/check": handle_check, "/api/keys": handle_keys,
             "/api/preview_voice": handle_preview_voice, "/api/profile": handle_profile,
             "/api/retry": handle_retry, "/api/start": handle_start, "/api/stop": handle_stop,
             "/api/apply": handle_apply, "/api/ping": handle_ping,

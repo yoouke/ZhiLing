@@ -1,4 +1,4 @@
-"""一键包入口。
+"""织灵桌面入口：初始化向导与日常工作台。
 
 安装：pythonw app\\main.py            （自解压后从临时目录运行）
 状态：pythonw app\\main.py --status --root D:\\ZhiLing   （桌面快捷方式）
@@ -36,7 +36,7 @@ def open_window(url: str, profile_dir: Path) -> None:
     edge = find_edge()
     if edge:
         # 独立的 Edge 配置目录：窗口没有地址栏，也不会和用户自己的 Edge 窗口混在一起
-        subprocess.Popen([edge, f"--app={url}", "--window-size=1000,740", f"--user-data-dir={profile_dir}",
+        subprocess.Popen([edge, f"--app={url}", "--window-size=1280,860", f"--user-data-dir={profile_dir}",
                           "--no-first-run", "--disable-features=Translate"])
     else:
         raise RuntimeError("未找到 Microsoft Edge。请安装 Edge 后重新启动织灵。")
@@ -65,17 +65,14 @@ def resolve_mode(args, home: Path) -> tuple[str, Path | None]:
         last = last_install(home)
         root = Path(last) if last else None
     if root and (root / "state.json").exists():
-        return "status", root
+        return ("status" if server.installer.installation_ready(root) else "install"), root
     return "install", None
 
 
 def window_files(mode: str, home: Path) -> tuple[Path, Path]:
-    """两种窗口各用一把锁、一个 Edge 配置目录。
+    """One desktop host survives the transition from setup to workspace."""
+    return home / "desktop.lock", home / "edge-desktop"
 
-    安装向导开着的时候点桌面图标，不该被拽到那个安装页面上；反过来也一样。
-    """
-    tag = "status" if mode == "status" else "install"
-    return home / f"wizard-{tag}.lock", home / f"edge-{tag}"
 
 
 def main() -> None:
@@ -93,7 +90,7 @@ def main() -> None:
         open_window(url, edge_dir)
         return
 
-    app = server.App(mode, root=root if mode == "status" else None)
+    app = server.App(mode, root=root)
     httpd = server.make_server(app, 0)
     port = httpd.server_address[1]
     lock.write_text(json.dumps({"port": port, "token": app.token}), encoding="utf-8")

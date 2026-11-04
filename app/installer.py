@@ -167,6 +167,20 @@ def extracted_ok(root: Path) -> bool:
         (layout.pack / persona).exists() for persona in (personalize.PERSONA, personalize.LEGACY_PERSONA))
 
 
+SETUP_STEPS = frozenset(("extract", "ports", "configs", "astrbot", "napcat", "import", "shortcut", "login"))
+
+
+def installation_ready(root: Path) -> bool:
+    """A saved state alone does not mean the first-run installation completed."""
+    try:
+        saved = json.loads((Path(root) / "state.json").read_text(encoding="utf-8"))
+        return (isinstance(saved, dict) and isinstance(saved.get("done"), list)
+                and SETUP_STEPS.issubset(saved["done"]) and bool(saved.get("keys_ok"))
+                and bool(saved.get("profile")) and extracted_ok(Path(root)))
+    except (OSError, ValueError, TypeError):
+        return False
+
+
 def _tree_hash(root: Path) -> str:
     h = hashlib.sha256()
     for p in sorted(x for x in Path(root).rglob("*") if x.is_file() and "__pycache__" not in x.parts):
