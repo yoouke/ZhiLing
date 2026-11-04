@@ -269,7 +269,7 @@ def step_import(ctx: Ctx) -> None:
         shutil.rmtree(secrets_dir, ignore_errors=True)
     if data.get("fatal"):
         ctx.log(f"导入工具失败：{data['fatal']}")
-        raise InstallError(f"配置大肥鱼时出错了，点重试。原因：{data['fatal']}\n"
+        raise InstallError(f"配置角色时出错了，点重试。原因：{data['fatal']}\n"
                            f"详细日志：{layout.logs / 'import.log'}")
     bad = [x["name"] for x in data.get("results", []) if not x["ok"]]
     if bad:

@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-DEFAULT_NAME = "大肥鱼"
+DEFAULT_NAME = "你的角色"
 VOICE_PRESETS = [
     ("甜妹", "一个憨萌软糯的小女生，声音甜甜的、有点奶，十几岁的感觉，嘴馋爱撒娇，带一点小傲娇"),
     ("御姐", "二十多岁的成熟女生，声音低一点、慵懒有磁性，说话不紧不慢，偶尔带点调侃"),
