@@ -1,5 +1,6 @@
 import os
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -35,7 +36,26 @@ class ShortcutTest(unittest.TestCase):
                  "$s.TargetPath; $s.Arguments; $s.IconLocation; $s.WorkingDirectory"],
                 capture_output=True, env=env, check=True).stdout.decode("utf-8").splitlines()
             self.assertEqual(Path(out[0]), target)
-            self.assertEqual(out[1], args)
+            # WScript also uses the system ANSI code page for arguments. Read
+            # the saved MS-SHLLINK StringData independently to verify UTF-16.
+            data = lnk.read_bytes()
+            self.assertEqual(struct.unpack_from("<I", data)[0], 0x4c)
+            flags = struct.unpack_from("<I", data, 20)[0]
+            self.assertTrue(flags & 0x80, "Shell Link must contain Unicode StringData")
+            offset = 76
+            if flags & 1:  # LinkTargetIDList
+                offset += 2 + struct.unpack_from("<H", data, offset)[0]
+            if flags & 2:  # LinkInfo
+                offset += struct.unpack_from("<I", data, offset)[0]
+            strings = {}
+            for bit, field in [(4, "name"), (8, "relative"), (16, "working"),
+                               (32, "arguments"), (64, "icon")]:
+                if flags & bit:
+                    count = struct.unpack_from("<H", data, offset)[0]
+                    offset += 2
+                    strings[field] = data[offset:offset + count * 2].decode("utf-16-le")
+                    offset += count * 2
+            self.assertEqual(strings.get("arguments"), args)
             self.assertTrue(out[2].startswith(str(icon)))
             self.assertEqual(Path(out[3]), d)
 
