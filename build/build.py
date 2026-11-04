@@ -150,6 +150,9 @@ def prewarm(stage: Path) -> list[str]:
     ports, secrets = configs.pick_ports(), configs.new_secrets()
     configs.write_astrbot_config(layout.astrbot_data, ports=ports, secrets=secrets, deepseek_key="sk-build")
     services.start_astrbot(layout, state)
+    persona_file = layout.pack / personalize.PERSONA
+    original_persona = persona_file.read_text(encoding="utf-8")
+    persona_file.write_text("这是构建期的接口验证记录，不作为用户角色运行。", encoding="utf-8")
     try:
         url = f"http://127.0.0.1:{ports['dashboard']}"
         if not services.wait_http(url, 300):
@@ -172,6 +175,7 @@ def prewarm(stage: Path) -> list[str]:
             raise SystemExit(f"导入工具失败：{res.get('fatal') or bad}")
     finally:
         services.stop(state, "astrbot")
+        persona_file.write_text(original_persona, encoding="utf-8")
     return ["sk-build", "build-app", "build-token", *secrets.values()]
 
 
@@ -193,8 +197,16 @@ def clean(stage: Path, needles: list[str]) -> None:
 
 def stamp_executable(exe: Path, icon: Path) -> None:
     """Stamp the actual Windows executable, not only the desktop shortcut."""
-    from PyInstaller.utils.win32 import icon as icons, versioninfo as vi
-    icons.CopyIcons(str(exe), str(icon))
+    from PyInstaller.utils.win32 import icon as icons, versioninfo as vi, winresource
+    icons.CopyIcons_FromIco(str(exe), [str(icon)])
+    # Replace localized variants too; otherwise Windows can select an old icon
+    # or product name from the SFX template based on the user's system language.
+    resources = winresource.get_resources(str(exe), types=[3, 14])
+    for name, variants in resources.get(3, {}).items():
+        if 0 in variants:
+            winresource.add_or_update_resource(str(exe), variants[0], 3, names=[name])
+    group = resources[14][1][0]
+    winresource.add_or_update_resource(str(exe), group, 14)
     info = vi.VSVersionInfo(
         ffi=vi.FixedFileInfo(filevers=(0, 1, 0, 0), prodvers=(0, 1, 0, 0), flags=2, fileType=1),
         kids=[vi.StringFileInfo([vi.StringTable("080404B0", [
@@ -208,6 +220,7 @@ def stamp_executable(exe: Path, icon: Path) -> None:
             vi.StringStruct("LegalCopyright", "组件许可见 THIRD_PARTY_NOTICES.md"),
         ])]), vi.VarFileInfo([vi.VarStruct("Translation", [0x0804, 1200])])])
     vi.write_version_info_to_executable(str(exe), info)
+    winresource.add_or_update_resource(str(exe), info.toRaw(), 16)
 
 
 def package(stage: Path, dl: Path, out: Path) -> Path:
