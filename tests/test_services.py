@@ -98,6 +98,28 @@ class StartTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_first_service_start_repairs_extracted_plugin_import(self):
+        utils = self.layout.astrbot_data / "plugins/astrbot_plugin_group_chat_plus/private_chat/private_chat_utils"
+        utils.mkdir(parents=True)
+        (utils / "private_chat_session_guard.py").write_text("def guard_session(): return 'ready'\n", encoding="utf-8")
+        def spawn(*args, **kwargs):
+            import importlib
+            import sys
+            import types
+            package = types.ModuleType("session_fixture")
+            package.__path__ = [str(utils)]
+            sys.modules[package.__name__] = package
+            try:
+                loaded = importlib.import_module("session_fixture._session_guard")
+                self.assertEqual(loaded.guard_session(), "ready")
+            finally:
+                for name in list(sys.modules):
+                    if name == "session_fixture" or name.startswith("session_fixture."):
+                        del sys.modules[name]
+            return 4242
+        with mock.patch.object(services, "_spawn", side_effect=spawn):
+            self.assertEqual(services.start_astrbot(self.layout, self.state), 4242)
+
     def start(self, fn, *args):
         with mock.patch("subprocess.Popen") as popen:
             popen.return_value.pid = 4242
