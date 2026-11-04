@@ -15,7 +15,7 @@ from pathlib import Path
 PYTHON = "3.12.10"
 ASTRBOT = "4.29.3"
 NAPCAT = "v4.18.41"
-PYPI = "https://mirrors.aliyun.com/pypi/simple/"
+PYPI = "https://pypi.org/simple/"
 URLS = {
     "python.zip": f"https://www.python.org/ftp/python/{PYTHON}/python-{PYTHON}-embed-amd64.zip",
     "get-pip.py": "https://bootstrap.pypa.io/get-pip.py",
@@ -184,7 +184,10 @@ def clean(stage: Path, needles: list[str]) -> None:
     # -wal/-shm 是 SQLite 的伴生文件，里头留着还没并回主库的页，同样是预热期的数据
     for p in list(data.glob("*.db")) + list(data.glob("*.db-wal")) + list(data.glob("*.db-shm")):
         p.unlink()
-    for d in ("temp", "logs"):
+    # This is a disposable build stage, never a user's installation. Runtime
+    # plugin settings can contain the prewarm owner/session and are regenerated
+    # by the actual installation using the user's own configuration.
+    for d in ("temp", "logs", "config"):
         shutil.rmtree(data / d, ignore_errors=True)
     for p in list(stage.rglob("__pycache__")):
         shutil.rmtree(p, ignore_errors=True)
@@ -215,7 +218,7 @@ def audit_payload(stage: Path) -> dict:
         if not (stage / name).is_file():
             errors.append("缺少必要文件：" + name)
     data = stage / "astrbot/data"
-    if (data / "cmd_config.json").exists() or list(data.glob("*.db*")):
+    if (data / "cmd_config.json").exists() or list(data.glob("*.db*")) or (data / "config").exists():
         errors.append("预热账号配置或数据库未清理")
     if errors:
         raise SystemExit("安装包审计失败：\n" + "\n".join(errors))
