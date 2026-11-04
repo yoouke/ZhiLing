@@ -33,7 +33,6 @@ DIGESTS = {
 ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
 WORK = ROOT / ".tmp" / "build"
-DOWNLOADS = ROOT / "downloads"
 sys.path.insert(0, str(ROOT / "app"))
 
 
@@ -195,6 +194,38 @@ def clean(stage: Path, needles: list[str]) -> None:
         raise SystemExit("stage 里还有敏感串：\n" + "\n".join(map(str, leaks)))
 
 
+def audit_payload(stage: Path) -> dict:
+    """Inspect the assembled product, including data created during prewarming."""
+    import personalize
+    pack = stage / "pack"
+    manifest = json.loads((pack / "settings/pack.json").read_text(encoding="utf-8"))
+    errors = []
+    if manifest.get("persona") != {"id": "zhiling-character", "file": "persona/character.md"}:
+        errors.append("角色清单不属于当前产品")
+    if (pack / personalize.PERSONA).read_text(encoding="utf-8").strip():
+        errors.append("安装包包含预设人格")
+    if list(pack.glob("*.bat")) or (pack / personalize.LEGACY_PERSONA).exists():
+        errors.append("安装包仍包含旧产品入口或固定角色文件")
+    if list((pack / "voice").glob("*.mp3")):
+        errors.append("安装包包含固定角色声音样本")
+    if list((stage / "app/web/img").glob("*.jpg")):
+        errors.append("安装包包含旧角色插图")
+    for name in ("pack/LICENSE", "THIRD_PARTY_NOTICES.md", "app/web/img/icon.ico",
+                 "runtime/python/python.exe", "astrbot/main.py", "pack/tools/import_character.py"):
+        if not (stage / name).is_file():
+            errors.append("缺少必要文件：" + name)
+    data = stage / "astrbot/data"
+    if (data / "cmd_config.json").exists() or list(data.glob("*.db*")):
+        errors.append("预热账号配置或数据库未清理")
+    if errors:
+        raise SystemExit("安装包审计失败：\n" + "\n".join(errors))
+    return {"product": "织灵", "version": "0.1.0-dev", "fixed_persona": False,
+            "components": {"python": PYTHON, "astrbot": ASTRBOT, "napcat": NAPCAT},
+            "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+            "icon_sha256": hashlib.sha256((stage / "app/web/img/icon.ico").read_bytes()).hexdigest(),
+            "verification": "构建内容检查；不代表真实 QQ、模型调用或完整 PRD 已验收"}
+
+
 def stamp_executable(exe: Path, icon: Path) -> None:
     """Stamp the actual Windows executable, not only the desktop shortcut."""
     from PyInstaller.utils.win32 import icon as icons, versioninfo as vi, winresource
@@ -249,6 +280,8 @@ def package(stage: Path, dl: Path, out: Path) -> Path:
         f.write(sfx_config_text().encode("utf-8"))
         with open(WORK / "boot.7z", "rb") as b:
             shutil.copyfileobj(b, f)
+    # Test both compression and the actual appended SFX archive before uploading.
+    run([seven, "t", exe])
     (out / "SHA256SUMS.txt").write_text(hashlib.sha256(exe.read_bytes()).hexdigest() + "  " + exe.name + "\n", encoding="utf-8")
     return exe
 
@@ -263,7 +296,10 @@ def main() -> None:
     shutil.rmtree(stage, ignore_errors=True)
     assemble(stage, dl)
     clean(stage, prewarm(stage))
+    report = audit_payload(stage)
     exe = package(stage, dl, Path(args.out))
+    report["installer_sha256"] = hashlib.sha256(exe.read_bytes()).hexdigest()
+    (exe.parent / "BUILD_INFO.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     digest = hashlib.sha256(exe.read_bytes()).hexdigest()
     print(f"{exe}  {exe.stat().st_size / 1024 / 1024:.1f} MB  sha256={digest}")
 
