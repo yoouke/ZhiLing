@@ -23,17 +23,16 @@ setInterval(() => api("/api/ping", {}), 3000);
 api("/api/ping", {});
 
 const PAGES = ["选位置", "填 key", "个性化", "安装", "扫码", "完成"];
-const PICS = ["wave", "smile", "wink", "hug", "night", "wave"];
 const SAYS = [
   "从这里开始，创造属于你的角色。",
-  "这几把钥匙是我的饭票，别给别人看哦",
+  "配置角色使用的模型、记忆与语音服务。",
   "由你决定角色是谁、如何表达。",
-  "在搬家啦，等我一下下",
-  "用你的 QQ 小号扫一下，我就住进去了",
-  "搞定！快去 QQ 找我玩",
+  "正在准备运行环境与能力组件。",
+  "扫码连接角色使用的 QQ 账号。",
+  "连接已准备，可以开始交流。",
 ];
-// 状态页不是安装流程，别让她继续说「帮我找个窝」
-const STATUS_SAY = "有事就点下面的按钮，我在这儿";
+// 状态页使用宿主文案，不代替用户创作的角色说话。
+const STATUS_SAY = "管理角色、连接与任务服务。";
 
 const S = { page: 0, info: null, progress: null, timers: [] };
 
@@ -113,7 +112,7 @@ function pollProgress() {
 // ---------------- 第 1 页：位置 ----------------
 function pagePath() {
   S.page = 0;
-  shell(0, "欢迎", "装好以后，她就住在你的 QQ 小号里，用 DeepSeek 当脑子，会发表情包、发语音、记得你说过的事。", `
+  shell(0, "欢迎", "通过向导准备本机环境、创建角色并连接通信账号。", `
     <div class="warn"><b>请用 QQ 小号，别用常用的号。</b>用第三方程序登 QQ 有被限制功能或封号的风险，新号更容易被风控掉线。</div>
     <details class="note"><summary>许可与组件信息</summary><p>组件与素材分别遵循各自许可。完整信息见随附 THIRD_PARTY_NOTICES.md 和组件目录中的许可证。账号登录与 API 授权由你完成。</p></details>
     <label class="field">
@@ -144,7 +143,7 @@ function pagePath() {
 
 // ---------------- 第 2 页：key ----------------
 const HELP = {
-  qq: `她只认这个号当主人：只听你的、会主动找你聊天。填你自己平时用的大号，<b>不是</b>给她登录的小号。`,
+  qq: `绑定用于管理角色和确认操作的主人身份。填写你的常用账号，<b>不是</b>机器人登录的账号。`,
   deepseek: `<ol>
     <li>打开 <a href="https://platform.deepseek.com/" target="_blank">platform.deepseek.com</a>，用手机号登录。认准这个地址，别点广告和中转站。</li>
     <li>左侧「充值」，先充小额（几块钱就够试很久）。</li>
@@ -190,18 +189,18 @@ function pageKeys() {
     S.mode === "status" ? "只想改一项，别的留空就行。这些 key 只存在你这台电脑上，加密保存。"
       : "填完一项会马上检查一下。这些 key 只存在你这台电脑上，加密保存。", `
     ${keyField("owner_qq", "你的大号 QQ", HELP.qq, "text", 'inputmode="numeric" placeholder="比如 123456789"')}
-    ${keyField("deepseek", "DeepSeek API key（她的脑子）", HELP.deepseek, "password", ph("deepseek", 'placeholder="sk-..."'))}
+    ${keyField("deepseek", "DeepSeek API key（对话模型）", HELP.deepseek, "password", ph("deepseek", 'placeholder="sk-..."'))}
     <div class="grid2">
       <label class="field" id="f-app_id"><span>豆包语音 APP ID <em class="badge" id="b-app_id"></em></span>
         <input id="app_id" type="text" spellcheck="false" autocomplete="off" ${ph("app_id", "")}><div class="msg" id="m-app_id"></div></label>
       <label class="field" id="f-token"><span>豆包语音 Access Token</span>
         <input id="token" type="password" spellcheck="false" autocomplete="off" ${ph("token", "")}><div class="msg" id="m-token"></div></label>
     </div>
-    <details class="help"><summary>豆包语音去哪拿？（她发语音、唱歌用）</summary>${HELP.doubao}</details>
-    ${keyField("siliconflow", "硅基流动 API key（她的记忆）", HELP.siliconflow, "password", ph("siliconflow", ""))}
+    <details class="help"><summary>豆包语音去哪拿？（用于语音与唱歌）</summary>${HELP.doubao}</details>
+    ${keyField("siliconflow", "硅基流动 API key（记忆检索）", HELP.siliconflow, "password", ph("siliconflow", ""))}
     ${S.mode === "status" ? "" : `<div id="mini">${miniProgress()}</div>`}`,
     `<button id="back">${S.mode === "status" ? "返回" : "上一步"}</button>
-     <button class="primary" id="go" disabled>${S.mode === "status" ? "保存并重启她" : "下一步"}</button>`);
+     <button class="primary" id="go" disabled>${S.mode === "status" ? "保存并重新联动" : "下一步"}</button>`);
 
   // 改设置时留空 = 用已保存的那个，所以空着也算过关；新装时每项都得填
   const blankOk = (f) => S.mode === "status" && saved.includes(f) && !$("#" + f).value.trim();
@@ -245,7 +244,7 @@ function pageKeys() {
     const r = await api("/api/keys", { owner_qq: val("owner_qq"), deepseek: val("deepseek"), siliconflow: val("siliconflow"),
       app_id: val("app_id"), token: val("token") });
     if (r.ok) return S.mode === "status" ? applySettings() : pageProfile();
-    $("#go").textContent = S.mode === "status" ? "保存并重启她" : "下一步";
+    $("#go").textContent = S.mode === "status" ? "保存并重新联动" : "下一步";
     for (const [k, msg] of Object.entries(r.errors || {})) setBadge(k === "doubao" ? "app_id" : k, "bad", msg);
     refresh();
   };
@@ -261,21 +260,21 @@ function pageProfile() {
     `<button class="chip${v.voice === p.voice ? " on" : ""}" data-i="${i}" type="button">${esc(v.name)}</button>`).join("");
   const memes = Object.entries(p.memes).map(([id, on]) =>
     `<label><input type="checkbox" data-meme="${esc(id)}" ${on ? "checked" : ""}> ${esc(MEME_NAMES[id] || id)}</label>`).join("");
-  shell(2, "她是什么样的", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
+  shell(2, "创建你的角色", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
     <label class="field"><span>名字</span><input id="name" type="text" maxlength="20" value="${esc(p.name)}"></label>
     <label class="field"><span>从文件导入提示词（Markdown / TXT）</span><input id="persona-file" type="file" accept=".md,.txt,text/plain,text/markdown"></label>
     <label class="field"><span>人格设定（描述或粘贴提示词）</span><textarea id="persona" rows="7">${esc(p.persona)}</textarea></label>
     <div class="note" style="margin-top:-8px">主人身份在前一步绑定；提示词可以直接导入并编辑，不需要手动填写身份占位符。</div>
-    <label class="field"><span>声音（用一句话描述她的声音）</span>
+    <label class="field"><span>声音（用一句话描述角色的声音）</span>
       <div class="row"><input id="voice" type="text" value="${esc(p.voice)}"><button id="listen" type="button">▶ 试听</button></div>
       <div class="row" style="gap:8px">${presets}</div>
       <div class="msg" id="m-voice"></div></label>
     <audio id="player" hidden></audio>
     <div class="field"><span style="font-weight:600">表情包（至少留一套）</span><div class="checks">${memes}</div>
-      <div class="msg">想加自己的图：装好后在 QQ 里直接发给她说「存一下」，或者在后台的表情包管理里上传。</div></div>
+      <div class="msg">想加自己的图：装好后在 QQ 里直接发给角色说「存一下」，或者在后台的表情包管理里上传。</div></div>
     <div id="msg" class="msg bad" role="alert"></div>
     ${S.mode === "status" ? "" : `<div id="mini">${miniProgress()}</div>`}`,
-    `<button id="back">上一步</button><button class="primary" id="go">${S.mode === "status" ? "保存并重启她" : "下一步"}</button>`);
+    `<button id="back">上一步</button><button class="primary" id="go">${S.mode === "status" ? "保存并重新联动" : "下一步"}</button>`);
 
   $("#persona-file").onchange = async (event) => {
     const file = event.target.files?.[0];
@@ -454,8 +453,8 @@ async function pageDone() {
   const d = await api("/api/done");
   const name = S.info.profile?.name || "你的角色";
   shell(5, `${esc(name)}上线了`, "用你的大号私聊小号，说句「在吗」试试。", `
-    <div class="note">桌面放了一个「启动织灵」。电脑重启后双击它，她就会重新上线（登录没失效就不用再扫码）。<br>
-    电脑睡眠或关机时她就下线了，笔记本记得关掉自动睡眠。</div>
+    <div class="note">桌面放了一个「启动织灵」。电脑重启后双击它，服务就会重新启动（登录没失效就不用再扫码）。<br>
+    电脑睡眠或关机时服务会停止，笔记本记得关掉自动睡眠。</div>
     <dl class="info">
       <dt>后台地址</dt><dd>${esc(d.dashboard_url)}</dd>
       <dt>后台账号</dt><dd>${esc(d.username)}</dd>
@@ -471,13 +470,13 @@ async function pageStatus() {
   clearTimers();
   S.page = -1;
   const name = S.info.profile?.name || "你的角色";
-  shell(-1, esc(name), "她住在你电脑里。关掉这个窗口不影响她在线。", `
-    <div class="status-big"><span class="dot" id="sdot"></span><span id="stext">看看她在不在…</span></div>
+  shell(-1, esc(name), "角色在本机运行，关闭主窗口后服务继续运行。", `
+    <div class="status-big"><span class="dot" id="sdot"></span><span id="stext">正在检查服务…</span></div>
     <div id="sqr" hidden>${qrBlock()}</div>
     <div id="serr" class="msg bad" role="alert"></div>
     <div class="acts">
-      <button class="primary big" id="up">让她上线</button>
-      <button class="big" id="down">让她下线</button>
+      <button class="primary big" id="up">启动服务</button>
+      <button class="big" id="down">停止服务</button>
     </div>
     <div class="group"><h3>改设置</h3><div class="acts">
       <button id="edit-prof">改名字 / 性格 / 声音</button>
@@ -486,10 +485,10 @@ async function pageStatus() {
       <button id="switch-qq">退出小号 / 换一个</button>
     </div></div>
     <div class="group"><h3>不用了</h3><div class="acts">
-      <button id="quit">停掉她并退出</button>
+      <button id="quit">停止服务并退出</button>
       <button class="danger-ghost" id="uninstall">彻底卸载</button>
     </div>
-    <div class="msg">「停掉她并退出」只是让她下线，桌面图标还在，随时双击让她回来。「彻底卸载」会删掉全部文件。</div></div>`, "");
+    <div class="msg">「停止服务并退出」只是停止服务，桌面图标还在，随时双击重新启动。「彻底卸载」会删掉全部文件。</div></div>`, "");
   $("#up").onclick = async () => { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
   $("#down").onclick = async () => { const r = await api("/api/stop", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
   $("#edit-keys").onclick = () => { clearTimers(); pageKeys(); };
@@ -499,7 +498,7 @@ async function pageStatus() {
     const yes = await confirmBox({
       title: "退出小号 / 换一个",
       body: `<p>当前这个小号会<b>退出登录</b>，不再是机器人，然后出一张新的二维码。</p>
-        <div class="note">想换号就用另一个小号扫；不想再用了，出码后直接点「让她下线」就行。<br>
+        <div class="note">想换号就用另一个小号扫；不想再用了，出码后直接点「停止服务」就行。<br>
         这个小号在这台电脑上的登录数据会一起清掉，以后不会自己登回来。<br>
         名字、性格、聊天记录和表情包都留着。不会动你自己常用的那个 QQ。</div>`,
       ok: "退出登录",
@@ -513,16 +512,16 @@ async function pageStatus() {
   };
   $("#quit").onclick = async () => {
     const yes = await confirmBox({
-      title: "停掉她并退出",
-      body: `<p>她会下线，后台也一起关掉，不再占电脑资源。</p>
-        <div class="note">什么都不会删。想让她回来，双击桌面的「启动织灵」。</div>`,
+      title: "停止服务并退出",
+      body: `<p>角色和任务服务都会停止。</p>
+        <div class="note">什么都不会删。需要再次运行时，双击桌面的「启动织灵」。</div>`,
       ok: "停掉并退出",
     });
     if (!yes) return;
     const r = await api("/api/quit", {});
     if (!r.ok) return ($("#serr").textContent = r.message);
-    shell(-1, "她下线了", "已经全部停掉。", `
-      <div class="note">想让她回来，双击桌面的「启动织灵」。这个窗口可以关了。</div>`,
+    shell(-1, "服务已停止", "已经全部停掉。", `
+      <div class="note">需要再次运行时，双击桌面的「启动织灵」。这个窗口可以关了。</div>`,
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
     $("#fin").onclick = () => window.close();
   };
@@ -534,19 +533,19 @@ async function pageStatus() {
       body: `<p>会删掉下面这些，<b>删了找不回来</b>：</p>
         <ul class="bullets">
           <li>安装目录 <code>${esc(S.info.root || "")}</code> 里的全部文件</li>
-          <li>她的聊天记忆、表情包、你填的 key</li>
+          <li>角色的聊天记忆、表情包、你填的 key</li>
           <li>桌面上的「启动织灵」图标</li>
           <li>小号的登录状态和它在这台电脑上的聊天数据</li>
         </ul>
         <div class="note">不装注册表、不设环境变量、不加开机自启，所以删完就真没了。<br>
         不会动你电脑上的 QQ 软件，也不会动你自己常用那个号的聊天记录。<br>
-        只是暂时不用的话，点上一个「停掉她并退出」就够了。</div>`,
+        只是暂时不用的话，点上一个「停止服务并退出」就够了。</div>`,
       ok: "我确定，卸载",
     });
     if (!yes) return;
     clearTimers();
     const r = await api("/api/uninstall", {});
-    shell(-1, r.ok ? "已经卸载了" : "卸载没成功", r.ok ? "谢谢你陪了她一段时间。" : "", r.ok ? `
+    shell(-1, r.ok ? "已经卸载了" : "卸载没成功", r.ok ? "卸载流程已开始。" : "", r.ok ? `
       <div class="note">文件会在几秒内删干净。关掉这个窗口就行。<br>
       想再装回来，重新双击一键包。</div>` : `<div class="msg bad" style="white-space:pre-wrap">${esc(r.message || "")}</div>`,
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
@@ -559,7 +558,7 @@ async function pageStatus() {
     const running = s.astrbot && s.napcat;
     let text, dot;
     if (s.starting) [text, dot] = ["正在启动，大概一分钟…", "wait"];
-    else if (!running) [text, dot] = ["她下线了", "off"];
+    else if (!running) [text, dot] = ["服务已停止", "off"];
     else if (s.login === "online") [text, dot] = [`在线${s.qq ? "（小号 " + s.qq + "）" : ""}`, "on"];
     else if (s.login === "need_scan" || s.login === "scanned" || s.login === "error") [text, dot] = ["要重新扫码登录", "wait"];
     else [text, dot] = ["正在连接 QQ…", "wait"];
@@ -587,7 +586,7 @@ async function pageStatus() {
 async function applySettings() {
   clearTimers();
   S.page = -1;
-  shell(-1, "正在应用改动", "在重写配置、重启她。大概一两分钟，别关窗口。", `
+  shell(-1, "正在应用改动", "在更新配置并重新联动服务。大概一两分钟，别关窗口。", `
     <ul class="tasks" id="tasks"></ul>
     <div class="note">改完会自己回到主页。登录没失效就不用再扫码。</div>
     <div id="msg" class="msg bad" role="alert"></div>`,
