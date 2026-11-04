@@ -42,11 +42,11 @@ class ConfigsTest(unittest.TestCase):
     def test_astrbot_config_fields(self):
         c = self.astrbot()
         d = c["dashboard"]
-        self.assertEqual((d["host"], d["port"], d["username"]), ("127.0.0.1", 6185, "dafeiyu"))
+        self.assertEqual((d["host"], d["port"], d["username"]), ("127.0.0.1", 6185, "zhiling"))
         self.assertFalse(d["password_change_required"])
         self.assertTrue(d["password_storage_upgraded"])
         self.assertTrue(d["jwt_secret"])
-        self.assertEqual(c["platform"], [{"id": "dafeiyu", "type": "aiocqhttp", "enable": True,
+        self.assertEqual(c["platform"], [{"id": "zhiling", "type": "aiocqhttp", "enable": True,
                                           "ws_reverse_host": "127.0.0.1", "ws_reverse_port": 6299,
                                           "ws_reverse_token": self.secrets["onebot_token"]}])
         self.assertEqual(c["provider_sources"][0]["key"], ["sk-ds"])

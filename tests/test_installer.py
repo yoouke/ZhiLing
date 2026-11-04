@@ -96,6 +96,7 @@ class InstallerTest(unittest.TestCase):
         import services
         layout = services.Layout(self.root)
         for p in (layout.python, layout.astrbot / "main.py", layout.pack / personalize.PERSONA,
+                  layout.pack / "settings" / "pack.json",
                   layout.napcat / "node.exe"):
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text("", encoding="utf-8")
@@ -217,7 +218,7 @@ class InstallerTest(unittest.TestCase):
         self.assertFalse((self.root / ".import" / "s").exists())  # 放 key 的临时文件用完就删
         log = (self.root / "logs" / "import.log").read_text("utf-8")
         self.assertNotIn("secret-siliconflow", log)
-        self.assertTrue((self.root / "pack" / "persona" / "大肥鱼.md").read_text("utf-8").startswith("你是小鲸"))
+        self.assertTrue((self.root / "pack" / "persona" / "character.md").read_text("utf-8").startswith("你是小鲸"))
 
     def test_import_reports_failed_items(self):
         err, _ = self.run_import({"fatal": None, "results": [{"name": "人格", "ok": True},

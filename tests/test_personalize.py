@@ -19,7 +19,7 @@ class PersonalizeTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def persona(self):
-        return (self.pack / "persona" / "大肥鱼.md").read_text(encoding="utf-8")
+        return (self.pack / "persona" / "character.md").read_text(encoding="utf-8")
 
     def pack_json(self):
         return json.loads((self.pack / "settings" / "pack.json").read_text(encoding="utf-8"))
