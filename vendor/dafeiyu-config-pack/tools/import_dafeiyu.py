@@ -1,10 +1,8 @@
-"""大肥鱼配置包导入工具。
+"""织灵运行配置导入工具。
 
-把 settings/pack.json 里写的东西装进你的 AstrBot：人格、六个插件和它们的设置、
-表情包、记忆、语音，还有 plugins/ 文件夹里的额外插件。可以反复运行，已经装过的会跳过或更新。
-
-用法：双击上一层的「导入大肥鱼.bat」，按提示回答几个问题。
-测试用：python import_dafeiyu.py --answers 回答.json（回答文件里的 *_file 字段指向放密码或 key 的文本文件）。
+按 settings/pack.json 安装角色资料、插件、记忆、语音及表情能力。
+由主程序提供回答文件并调用；开发调试时可传 --answers <回答文件>。
+凭据通过回答文件里的 *_file 路径提供，导入结果可写入 --result-json。
 """
 import base64
 import getpass
@@ -319,7 +317,7 @@ def main():
     if "--answers" in sys.argv:
         ANSWERS = json.load(open(sys.argv[sys.argv.index("--answers") + 1], encoding="utf-8-sig"))
     pack = json.load(open(os.path.join(PACK, "settings", "pack.json"), encoding="utf-8-sig"))
-    say("大肥鱼配置包导入工具")
+    say("织灵运行配置导入工具")
     say("开始前确认：AstrBot 已经在运行，QQ 小号已经通过 NapCat 接上，DeepSeek 已经能正常回话。")
 
     # ---------- 连接后台 ----------
@@ -380,7 +378,7 @@ def main():
         say("  不是 DeepSeek 模型，跳过")
 
     # ---------- 人格 ----------
-    step("写入人格「大肥鱼」")
+    step("写入你的角色设定")
     pid = pack["persona"]["id"]
     text = open(os.path.join(PACK, pack["persona"]["file"]), encoding="utf-8-sig").read().replace("{OWNER_QQ}", owner)
     qid = urllib.parse.quote(pid, safe="")
