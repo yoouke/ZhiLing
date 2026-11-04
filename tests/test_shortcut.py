@@ -19,7 +19,7 @@ class ShortcutTest(unittest.TestCase):
             args = f'"{d / "app" / "main.py"}" --status --root "{d / "大肥 鱼"}"'
             lnk = shortcut.create_shortcut(target, args, "启动织灵", icon, desktop=d)
             self.assertEqual(lnk, d / "启动织灵.lnk")
-            self.assertTrue(lnk.exists())
+            self.assertTrue(lnk.exists(), f"Expected {lnk!s}; actual files: {[x.name for x in d.iterdir()]}")
             env = dict(os.environ, LNK=str(lnk))
             out = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",

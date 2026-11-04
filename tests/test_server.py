@@ -144,6 +144,7 @@ class ServerTest(unittest.TestCase):
         self.call("/api/path", {"path": self.install_root()})
         self.call("/api/keys", self.keys())
         _, info = self.call("/api/info")
+        info["profile"].update(name="测试角色", persona="由用户填写的人格。", voice="温柔自然")
         bad = dict(info["profile"], memes={k: False for k in info["profile"]["memes"]})
         self.assertFalse(self.call("/api/profile", bad)[1]["ok"])
         self.assertTrue(self.call("/api/profile", info["profile"])[1]["ok"])
