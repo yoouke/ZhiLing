@@ -56,9 +56,11 @@ def main():
     tag = "v0.1.0-dev"
     # Deliberately do not use --clobber or edit an existing release.
     subprocess.run(["gh", "release", "create", tag, "--repo", repo, "--target", build["head_sha"],
-                    "--prerelease", "--title", "织灵 0.1.0 开发预览", "--notes-file", str(notes),
+                    "--draft", "--prerelease", "--title", "织灵 0.1.0 开发预览", "--notes-file", str(notes),
                     str(installer), "candidate/SHA256SUMS.txt", "candidate/BUILD_INFO.json",
                     "proof/SMOKE_REPORT.json", "proof/welcome.png"], check=True)
+    subprocess.run(["gh", "release", "edit", tag, "--repo", repo, "--draft=false",
+                    "--prerelease", "--latest=false"], check=True)
 
 
 if __name__ == "__main__":
