@@ -264,8 +264,9 @@ function pageProfile() {
     `<label><input type="checkbox" data-meme="${esc(id)}" ${on ? "checked" : ""}> ${esc(MEME_NAMES[id] || id)}</label>`).join("");
   shell(2, "她是什么样的", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
     <label class="field"><span>名字</span><input id="name" type="text" maxlength="20" value="${esc(p.name)}"></label>
+    <label class="field"><span>从文件导入提示词（Markdown / TXT）</span><input id="persona-file" type="file" accept=".md,.txt,text/plain,text/markdown"></label>
     <label class="field"><span>人格设定（描述或粘贴提示词）</span><textarea id="persona" rows="7">${esc(p.persona)}</textarea></label>
-    <div class="note" style="margin-top:-8px">里面的 <code>{OWNER_QQ}</code> 别删，装的时候会换成你的 QQ 号，她靠这个认主人。</div>
+    <div class="note" style="margin-top:-8px">主人身份在前一步绑定；提示词可以直接导入并编辑，不需要手动填写身份占位符。</div>
     <label class="field"><span>声音（用一句话描述她的声音）</span>
       <div class="row"><input id="voice" type="text" value="${esc(p.voice)}"><button id="listen" type="button">▶ 试听</button></div>
       <div class="row" style="gap:8px">${presets}</div>
@@ -277,6 +278,23 @@ function pageProfile() {
     ${S.mode === "status" ? "" : `<div id="mini">${miniProgress()}</div>`}`,
     `<button id="back">上一步</button><button class="primary" id="go">${S.mode === "status" ? "保存并重启她" : "下一步"}</button>`);
 
+  $("#persona-file").onchange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      if (!/\.(md|txt)$/i.test(file.name)) throw new Error("请选择 Markdown 或 TXT 文档");
+      if (file.size > 256 * 1024) throw new Error("提示词文档请控制在 256 KB 以内");
+      const text = new TextDecoder("utf-8", {fatal: true}).decode(await file.arrayBuffer());
+      if (!text.trim()) throw new Error("文档没有可导入的文字");
+      if ($("#persona").value && !(await confirmBox({title: "替换当前提示词", body: "<p>用所选文档替换编辑框里的文字，确认保存后才会应用到角色。</p>", ok: "导入文档"}))) return;
+      $("#persona").value = text;
+      $("#msg").textContent = "";
+    } catch (error) {
+      $("#msg").textContent = error instanceof TypeError ? "文档编码无法读取，请另存为 UTF-8 后重试" : error.message;
+    } finally {
+      event.target.value = "";
+    }
+  };
   document.querySelectorAll(".chip").forEach((b) => (b.onclick = () => {
     $("#voice").value = S.info.voice_presets[b.dataset.i].voice;
     document.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === b));
