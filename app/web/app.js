@@ -22,7 +22,7 @@ async function api(path, body) {
 setInterval(() => api("/api/ping", {}), 3000);
 api("/api/ping", {});
 
-const PAGES = ["选位置", "填 key", "个性化", "安装", "扫码", "完成"];
+const PAGES = ["本机环境", "模型服务", "角色设定", "准备运行", "连接账号", "完成"];
 const SAYS = [
   "从这里开始，创造属于你的角色。",
   "配置角色使用的模型、记忆与语音服务。",
@@ -41,24 +41,46 @@ function clearTimers() {
   S.timers = [];
 }
 
+const NAV = [
+  ["overview", "运行概览", "grid", pageStatus],
+  ["role", "角色设定", "person", pageProfile],
+  ["models", "模型与服务", "layers", pageKeys],
+  ["connection", "账号连接", "link", pageConnections],
+  ["agent", "Agent 任务", "spark", pageAgent],
+  ["settings", "设置与维护", "settings", pageSettings],
+];
+function icon(name) {
+  const paths = {
+    grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+    person: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/>',
+    link: '<path d="m10 13 4-4m-5 7-2 2a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2-1 2-2a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/>',
+    spark: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>',
+    settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',
+    arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+    play: '<path d="m8 4 13 8-13 8V4Z"/>',
+  };
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
+}
 function shell(page, title, sub, bodyHtml, footHtml) {
-  const steps = PAGES.map((n, i) =>
-    `<li class="${i === page ? "on" : i < page ? "past" : ""}"><span class="n">${i < page ? "✓" : i + 1}</span>${n}</li>`).join("");
-  $("#app").innerHTML = `
-  <div class="shell">
-    <aside class="side">
-      <div class="brand">织灵<small>让想象，成为日常。</small></div>
-      <img class="avatar zhiling-mark" src="/img/logo.png" alt="织灵">
-      <div class="bubble">${esc(page < 0 ? STATUS_SAY : SAYS[Math.max(page, 0)])}</div>
-      ${page >= 0 && S.mode === "install" ? `<ol class="steps">${steps}</ol>` : ""}
-    </aside>
-    <main class="main">
-      <h1>${title}</h1>
-      <p class="sub">${sub}</p>
-      <div class="body">${bodyHtml}</div>
-      <div class="foot">${footHtml || ""}</div>
-    </main>
-  </div>`;
+  const setup = S.mode !== "status";
+  document.body.dataset.mode = setup ? "setup" : "workspace";
+  if (setup) {
+    const steps = PAGES.map((n, i) => `<li class="${i === page ? "on" : i < page ? "past" : ""}" ${i === page ? 'aria-current="step"' : ''}><span class="n">${i < page ? "✓" : i + 1}</span><span>${n}</span></li>`).join("");
+    $("#app").innerHTML = `<div class="setup-window">
+      <header class="titlebar"><div class="brand-line"><img src="/img/favicon.png" alt=""><strong>织灵</strong><span>ZhiLing</span></div><span class="mode-label">本机初始化</span></header>
+      <div class="setup-layout"><aside class="setup-intro"><span class="eyebrow">让想象，成为日常。</span><h2>为你的角色，<br>织一个世界。</h2><p>人格、声音、记忆与能力，<br>从你自己的设定开始。</p><div class="brand-art"><img src="/img/logo.png" alt="织灵蝴蝶标志"></div><div class="intro-bottom"><span>本地优先</span><i></i><span>自由创作</span><i></i><span>由你定义</span></div></aside>
+      <main class="main setup-panel"><ol class="steps" aria-label="初始化步骤">${steps}</ol><div class="page-heading"><span class="eyebrow">${String(Math.max(page, 0) + 1).padStart(2,"0")} / 初始化</span><h1>${title}</h1><p class="sub">${sub}</p></div><div class="body">${bodyHtml}</div><footer class="foot">${footHtml || ""}</footer></main></div>
+    </div>`;
+  } else {
+    const active = S.view || "overview";
+    const label = NAV.find(n => n[0] === active)?.[1] || "工作台";
+    $("#app").innerHTML = `<div class="workspace-window">
+      <aside class="workspace-side"><div class="brand-line"><img src="/img/favicon.png" alt=""><div><strong>织灵</strong><span>ZhiLing</span></div></div><div class="nav-caption">我的工作空间</div><nav aria-label="工作台导航">${NAV.map(([id, name, glyph])=>`<button type="button" aria-label="${name}" title="${name}" data-nav="${id}" class="nav-item ${id === active ? 'active' : ''}" ${id === active ? 'aria-current="page"' : ''}>${icon(glyph)}<span>${name}</span>${id === active ? '<i></i>' : ''}</button>`).join("")}</nav><div class="sidebar-bottom"><img src="/img/favicon.png" alt=""><div><strong>本机工作区</strong><span>${esc(S.info?.version || "开发预览")}</span></div></div></aside>
+      <div class="workspace-content"><header class="workspace-top"><div>我的工作空间 <span>/</span> <strong>${label}</strong></div><span class="local-badge"><i></i> 本地工作区</span></header><main class="main workspace-main"><div class="page-heading"><span class="eyebrow">${active === 'overview' ? '日常，从这里继续。' : '角色的每一面，由你定义。'}</span><h1>${title}</h1><p class="sub">${sub}</p></div><div class="body">${bodyHtml}</div>${footHtml ? `<footer class="foot">${footHtml}</footer>` : ''}</main></div>
+    </div>`;
+    document.querySelectorAll("[data-nav]").forEach(button => button.onclick = () => NAV.find(n=>n[0] === button.dataset.nav)[3]());
+  }
 }
 
 /** 居中弹窗确认。opts: {title, body, ok, danger, need}（need 填了就要照着抄一遍才能点确认）*/
@@ -112,19 +134,20 @@ function pollProgress() {
 // ---------------- 第 1 页：位置 ----------------
 function pagePath() {
   S.page = 0;
-  shell(0, "欢迎", "通过向导准备本机环境、创建角色并连接通信账号。", `
-    <div class="warn"><b>请用 QQ 小号，别用常用的号。</b>用第三方程序登 QQ 有被限制功能或封号的风险，新号更容易被风控掉线。</div>
+  shell(0, S.info.root ? "继续准备你的工作区" : "从一个新的相遇开始", S.info.root ? "检测到上次未完成的初始化，可以从已有进度继续。" : "只需完成一次配置，之后打开织灵即可进入日常工作台。", `
+    <div class="setup-summary"><span class="summary-icon">${icon("spark")}</span><div><strong>一个入口，准备好角色的日常</strong><p>配置本机环境、角色设定与通信账号。</p></div></div><details class="help"><summary>QQ 账号使用提示</summary><p>请使用独立 QQ 小号。第三方协议登录可能受到平台限制；登录与验证操作需要你本人完成。</p></details>
     <details class="note"><summary>许可与组件信息</summary><p>组件与素材分别遵循各自许可。完整信息见随附 THIRD_PARTY_NOTICES.md 和组件目录中的许可证。账号登录与 API 授权由你完成。</p></details>
     <label class="field">
       <span>装在哪</span>
-      <input id="path" type="text" value="${esc(S.info.default_path)}" spellcheck="false" autocomplete="off">
+      <input id="path" type="text" value="${esc(S.info.root || S.info.default_path)}" spellcheck="false" autocomplete="off">
     </label>
     <div class="note">要留出 10G 左右的空间。路径只能用英文、不能有空格，比如 <code>D:\\ZhiLing</code>。以前装过的，填同一个位置会接着上次的进度。</div>
     <div id="msg" class="msg" role="alert"></div>`,
-    `<span></span><button class="primary" id="go">开始安装</button>`);
+    `<span></span><button class="primary" id="go">${S.info.root ? "继续初始化" : "开始初始化"} ${icon("arrow")}</button>`);
   const go = async () => {
     $("#go").disabled = true;
-    const r = await api("/api/path", { path: $("#path").value });
+    const selected = $("#path").value.trim();
+    const r = S.info.root && selected === S.info.root ? await api("/api/resume", {}) : await api("/api/path", { path: selected });
     $("#go").disabled = false;
     if (!r.ok) {
       $("#msg").className = "msg bad";
@@ -183,11 +206,12 @@ function setBadge(id, state, msg) {
 
 function pageKeys() {
   S.page = 1;
+  S.view = "models";
   const saved = (S.info.saved_keys || []);
   const ph = (f, normal) => saved.includes(f) ? 'placeholder="已保存，不用改就留空"' : normal;
-  shell(1, S.mode === "status" ? "改 key" : "填写你的 key",
-    S.mode === "status" ? "只想改一项，别的留空就行。这些 key 只存在你这台电脑上，加密保存。"
-      : "填完一项会马上检查一下。这些 key 只存在你这台电脑上，加密保存。", `
+  shell(1, S.mode === "status" ? "模型与服务" : "连接角色需要的服务",
+    S.mode === "status" ? "保留已保存的配置，或修改后重新联动。主程序凭据使用 Windows 加密存储。"
+      : "填写后会检查连接。主程序凭据使用 Windows 加密存储；运行组件配置请妥善保管。", `
     ${keyField("owner_qq", "你的大号 QQ", HELP.qq, "text", 'inputmode="numeric" placeholder="比如 123456789"')}
     ${keyField("deepseek", "DeepSeek API key（对话模型）", HELP.deepseek, "password", ph("deepseek", 'placeholder="sk-..."'))}
     <div class="grid2">
@@ -255,12 +279,13 @@ const MEME_NAMES = { "blue-fat-fish-meme-pack": "蓝色角色表情包（157 张
 
 function pageProfile() {
   S.page = 2;
+  S.view = "role";
   const p = S.info.profile;
   const presets = S.info.voice_presets.map((v, i) =>
     `<button class="chip${v.voice === p.voice ? " on" : ""}" data-i="${i}" type="button">${esc(v.name)}</button>`).join("");
   const memes = Object.entries(p.memes).map(([id, on]) =>
     `<label><input type="checkbox" data-meme="${esc(id)}" ${on ? "checked" : ""}> ${esc(MEME_NAMES[id] || id)}</label>`).join("");
-  shell(2, "创建你的角色", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
+  shell(2, S.mode === "status" ? "角色设定" : "创造你想相遇的角色", "填写自己的角色设定，或粘贴已有提示词。声音和表情能力继续使用下方配置。", `
     <label class="field"><span>名字</span><input id="name" type="text" maxlength="20" value="${esc(p.name)}"></label>
     <label class="field"><span>从文件导入提示词（Markdown / TXT）</span><input id="persona-file" type="file" accept=".md,.txt,text/plain,text/markdown"></label>
     <label class="field"><span>人格设定（描述或粘贴提示词）</span><textarea id="persona" rows="7">${esc(p.persona)}</textarea></label>
@@ -274,7 +299,7 @@ function pageProfile() {
       <div class="msg">想加自己的图：装好后在 QQ 里直接发给角色说「存一下」，或者在后台的表情包管理里上传。</div></div>
     <div id="msg" class="msg bad" role="alert"></div>
     ${S.mode === "status" ? "" : `<div id="mini">${miniProgress()}</div>`}`,
-    `<button id="back">上一步</button><button class="primary" id="go">${S.mode === "status" ? "保存并重新联动" : "下一步"}</button>`);
+    `<button id="back">${S.mode === "status" ? "返回工作台" : "上一步"}</button><button class="primary" id="go">${S.mode === "status" ? "保存并重新联动" : "下一步"}</button>`);
 
   $("#persona-file").onchange = async (event) => {
     const file = event.target.files?.[0];
@@ -349,7 +374,7 @@ function renderTasks() {
 
 function pageTasks() {
   S.page = 3;
-  shell(3, "正在安装", "全部在后台自动完成。中途弹出 Windows 安全提示或防火墙提示，点「允许」或「运行」。", `
+  shell(3, "正在安装", "正在准备运行环境、连接与能力组件。每一步都会显示实际结果。", `
     <ul class="tasks" id="tasks"></ul>
     <div class="note">关掉窗口也没关系，下次打开织灵、选择同一个安装位置，会接着装。</div>`,
     `<span></span><button class="primary" id="retry" hidden>重试</button>`);
@@ -403,7 +428,7 @@ function pollLogin(onOnline) {
     if (show) {
       const img = $("#qr");
       const fresh = new Image();
-      fresh.onload = () => { img.src = fresh.src; img.hidden = false; $("#qrwait").hidden = true; };
+      fresh.onload = () => { if ($("#qr") !== img || !$("#qrwait")) return; img.src = fresh.src; img.hidden = false; $("#qrwait").hidden = true; };
       fresh.src = `/api/qr?token=${encodeURIComponent(window.TOKEN)}&t=${Date.now()}`;
     } else {
       $("#qr").hidden = true;
@@ -431,6 +456,7 @@ function pageQR() {
 
 // 状态页里的重新扫码：登录好了就回主页，不像安装时往下走
 function pageRescan() {
+  S.view = "connection";
   clearTimers();
   S.page = -1;
   shell(-1, "扫码登录小号", "用<b>小号</b>扫，不是你自己的大号。扫完在手机上确认。", qrBlock(),
@@ -448,52 +474,103 @@ function pageRescan() {
 
 // ---------------- 第 6 页：完成 ----------------
 async function pageDone() {
-  S.page = 5;
   clearTimers();
-  const d = await api("/api/done");
-  const name = S.info.profile?.name || "你的角色";
-  shell(5, `${esc(name)}上线了`, "用你的大号私聊小号，说句「在吗」试试。", `
-    <div class="note">桌面放了一个「启动织灵」。电脑重启后双击它，服务就会重新启动（登录没失效就不用再扫码）。<br>
-    电脑睡眠或关机时服务会停止，笔记本记得关掉自动睡眠。</div>
-    <dl class="info">
-      <dt>后台地址</dt><dd>${esc(d.dashboard_url)}</dd>
-      <dt>后台账号</dt><dd>${esc(d.username)}</dd>
-      <dt>后台密码</dt><dd>${esc(d.password)}</dd>
-    </dl>
-    <div class="msg">这组账号密码也存进了安装目录里的「我的信息.txt」。别截图发群。</div>`,
-    `<a href="${esc(d.dashboard_url)}" target="_blank"><button type="button">打开后台</button></a><button class="primary" id="fin">完成</button>`);
-  $("#fin").onclick = () => window.close();
+  S.page = 5;
+  shell(5, "你的工作区，准备好了", "初始化完成后，日常打开织灵会直接进入工作台。", `
+    <div class="complete-mark">✓</div><div class="complete-copy"><h2>欢迎来到织灵</h2><p>${esc(S.info.profile?.name || "你的角色")}的设定已保存。接下来可以检查运行状态、管理账号和启用 Agent 任务。</p></div>
+    <div class="note">桌面入口为「启动织灵」。电脑重启后由程序重新检查服务；有效的账号登录状态会继续使用。</div><div id="finish-msg" class="msg" role="status">正在确认最后的初始化步骤…</div>`,
+    `<span class="quiet">下一次，从工作台继续。</span><button class="primary" id="fin" disabled>进入工作台 ${icon("arrow")}</button>`);
+  $("#fin").onclick = async () => {
+    $("#fin").disabled = true;
+    const r = await api("/api/finish", {});
+    if (!r.ok) { $("#finish-msg").textContent = r.message; $("#fin").disabled = false; return; }
+    S.info = await api("/api/info");
+    S.mode = S.info.mode;
+    pageStatus();
+  };
+  const tick = async () => {
+    const p = await api("/api/progress");
+    if (!$("#finish-msg")) return;
+    $("#fin").disabled = !p.finished;
+    $("#finish-msg").textContent = p.finished ? "初始化已完成，可以进入工作台。" : "正在确认最后的初始化步骤…";
+  };
+  await tick(); S.timers.push(setInterval(tick, 1500));
 }
 
 // ---------------- 状态页（桌面快捷方式打开的） ----------------
 async function pageStatus() {
-  clearTimers();
-  S.page = -1;
-  const name = S.info.profile?.name || "你的角色";
-  shell(-1, esc(name), "角色在本机运行，关闭主窗口后服务继续运行。", `
-    <div class="status-big"><span class="dot" id="sdot"></span><span id="stext">正在检查服务…</span></div>
-    <div id="sqr" hidden>${qrBlock()}</div>
+  clearTimers(); S.page = -1; S.view = "overview";
+  const profile = S.info.profile || {};
+  const name = profile.name || "你的角色";
+  shell(-1, "运行概览", "在这里继续角色的日常，查看连接与服务状态。", `
+    <section class="workspace-hero"><div class="hero-copy"><span class="hero-label"><i></i> 当前角色</span><h2>${esc(name)}<span>的日常，正在这里延续。</span></h2><div class="hero-state"><span class="dot wait" id="sdot"></span><span id="stext" role="status">正在读取真实运行状态…</span></div><div class="acts"><button class="primary" id="up">${icon("play")} 一键联动</button><button class="secondary" id="down">停止服务</button></div></div><div class="hero-emblem"><img src="/img/logo.png" alt=""><span>ZhiLing / 本机工作区</span></div></section>
     <div id="serr" class="msg bad" role="alert"></div>
-    <div class="acts">
-      <button class="primary big" id="up">启动服务</button>
-      <button class="big" id="down">停止服务</button>
-    </div>
-    <div class="group"><h3>改设置</h3><div class="acts">
-      <button id="edit-prof">改名字 / 性格 / 声音</button>
-      <button id="edit-keys">改 key</button>
-      <button id="agent-settings">Agent 任务</button>
-      <button id="switch-qq">退出小号 / 换一个</button>
-    </div></div>
-    <div class="group"><h3>不用了</h3><div class="acts">
-      <button id="quit">停止服务并退出</button>
-      <button class="danger-ghost" id="uninstall">彻底卸载</button>
-    </div>
-    <div class="msg">「停止服务并退出」只是停止服务，桌面图标还在，随时双击重新启动。「彻底卸载」会删掉全部文件。</div></div>`, "");
-  $("#up").onclick = async () => { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
-  $("#down").onclick = async () => { const r = await api("/api/stop", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
-  $("#edit-keys").onclick = () => { clearTimers(); pageKeys(); };
-  $("#edit-prof").onclick = () => { clearTimers(); pageProfile(); };
-  $("#agent-settings").onclick = pageAgent;
+    <section class="service-grid" aria-label="服务状态"><article class="service-card"><span class="service-glyph">${icon("person")}</span><div><h3>角色服务</h3><p>会话与能力组件</p></div><span class="state-tag" id="service-role">检查中</span></article><article class="service-card"><span class="service-glyph">${icon("link")}</span><div><h3>QQ 通道</h3><p id="connection-account">账号与消息连接</p></div><span class="state-tag" id="service-qq">检查中</span></article><article class="service-card"><span class="service-glyph">${icon("spark")}</span><div><h3>Agent 引擎</h3><p>任务与工具执行</p></div><span class="state-tag" id="service-agent">检查中</span></article></section>
+    <div class="content-grid"><section class="panel role-preview"><div class="panel-heading"><div><span class="eyebrow">由你定义</span><h2>角色档案</h2></div><button class="text-button" id="edit-prof">编辑设定 ${icon("arrow")}</button></div><div class="role-identity"><div class="role-initial">${esc([...name][0] || "角")}</div><div><h3>${esc(name)}</h3><span>当前本机角色</span></div></div><p class="persona-excerpt">${esc(profile.persona || "还没有填写角色设定，可以进入编辑页面完善。")}</p><div class="role-foot"><span>人格 · 声音 · 表情</span><button id="edit-keys" class="text-button">模型与服务 ${icon("arrow")}</button></div></section>
+    <section class="panel"><div class="panel-heading"><div><span class="eyebrow">保持连接</span><h2>今天的工作区</h2></div></div><button class="shortcut-row" id="open-connection"><span class="shortcut-icon">${icon("link")}</span><span><strong>账号连接</strong><small>查看登录状态与重新扫码</small></span>${icon("arrow")}</button><button class="shortcut-row" id="agent-settings"><span class="shortcut-icon">${icon("spark")}</span><span><strong>Agent 任务</strong><small>部署引擎、检查桥接与任务通道</small></span>${icon("arrow")}</button><button class="shortcut-row" id="open-settings"><span class="shortcut-icon">${icon("settings")}</span><span><strong>设置与维护</strong><small>控制台入口、账号切换与退出</small></span>${icon("arrow")}</button></section></div>
+    <section class="panel activity-panel"><div class="panel-heading"><h2>本次联动</h2><span class="quiet">仅显示实际服务检查</span></div><div id="startup-events" class="empty-inline">尚无本次联动记录。</div></section>
+    <div id="sqr" class="panel" hidden><h2>账号需要重新登录</h2>${qrBlock()}</div>`, "");
+  $("#edit-prof").onclick = pageProfile; $("#edit-keys").onclick = pageKeys;
+  $("#agent-settings").onclick = pageAgent; $("#open-settings").onclick = pageSettings; $("#open-connection").onclick = pageConnections;
+  $("#up").onclick = async () => { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else await tick(); };
+  $("#down").onclick = async () => { const r = await api("/api/stop", {}); if (!r.ok) $("#serr").textContent = r.message; else await tick(); };
+  let polling = false, qrPolling = false, last;
+  const tag = (id, label, state) => { const node = $(id); node.textContent = label; node.className = "state-tag " + state; };
+  const tick = async () => {
+    if (polling) return; polling = true;
+    try {
+      const [s, a] = await Promise.all([api("/api/status"), api("/api/agent")]);
+      if (!$("#stext")) return;
+      if (typeof s.astrbot !== "boolean") { $("#serr").textContent = s.message || "无法读取服务状态"; return; }
+      last = s;
+      const running = s.astrbot && s.napcat;
+      const online = running && s.login === "online";
+      $("#stext").textContent = s.starting ? "正在联动服务…" : online ? "角色已连接，可以开始交流" : running ? "服务已启动，等待账号连接" : "服务未运行，随时可以继续";
+      $("#sdot").className = "dot " + (online ? "on" : s.starting || running ? "wait" : "off");
+      $("#serr").textContent = s.error || "";
+      tag("#service-role", s.astrbot ? "运行中" : "未运行", s.astrbot ? "online" : "idle");
+      tag("#service-qq", online ? "已连接" : s.napcat ? "待登录" : "未运行", online ? "online" : s.napcat ? "pending" : "idle");
+      tag("#service-agent", a.busy ? "准备中" : a.ready ? "已就绪" : a.installed ? "未就绪" : typeof a.installed === "boolean" ? "未部署" : "未知", a.ready ? "online" : "idle");
+      $("#connection-account").textContent = s.qq ? "当前账号 · " + s.qq : "账号与消息连接";
+      $("#up").disabled = !!s.starting || !!s.agent_preparing;
+      $("#down").disabled = (!s.astrbot && !s.napcat) || !!s.agent_preparing;
+      $("#startup-events").innerHTML = s.steps?.length ? s.steps.map(step=>`<div class="event-row"><span class="event-dot ${esc(step.status)}"></span><span>${esc(step.title)}</span><small>${esc(step.message || ({done:"已完成",doing:"正在检查",error:"需要处理",todo:"等待检查"}[step.status] || step.status))}</small></div>`).join("") : "尚无本次联动记录。点击一键联动后查看各项检查。";
+      const needQR = running && ["need_scan", "scanned", "error"].includes(s.login);
+      $("#sqr").hidden = !needQR;
+      if (needQR && !qrPolling) { qrPolling = true; bindRefreshQR(); pollLogin(()=>{}); }
+    } finally { polling = false; }
+  };
+  await tick(); S.timers.push(setInterval(tick,3000));
+  if (last && !last.astrbot && !last.napcat && !last.starting && !last.agent_preparing && $("#stext")) {
+    const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else await tick();
+  }
+}
+
+async function pageConnections() {
+  clearTimers(); S.view = "connection"; S.page = -1;
+  const s = await api("/api/status");
+  shell(-1, "账号连接", "管理角色用于交流的账号，登录状态由协议端实际检查。", `
+    <section class="panel connection-panel"><div class="panel-heading"><div class="account-title"><span class="account-logo">QQ</span><div><h2>QQ 通道</h2><span class="quiet">当前使用 NapCat</span></div></div><span class="state-tag ${s.login === 'online' && s.napcat ? 'online' : 'pending'}">${s.login === 'online' && s.napcat ? '已连接' : '等待连接'}</span></div><p>${s.qq ? '当前账号：' + esc(s.qq) : '连接独立 QQ 小号后，角色可以接收消息并回复。'}</p><div class="acts"><button class="primary" id="connection-check">${s.astrbot && s.napcat ? '检查登录 / 重新扫码' : '启动并连接'}</button><button id="connection-manage">账号管理</button></div></section><div id="connection-error" class="msg bad" role="alert"></div>`, `<button id="back">返回工作台</button>`);
+  $("#back").onclick = pageStatus; $("#connection-manage").onclick = pageSettings;
+  $("#connection-check").onclick = async () => { const r = await api("/api/start", {}); if (!r.ok) $("#connection-error").textContent = r.message; else pageRescan(); };
+}
+
+async function pageSettings() {
+  clearTimers(); S.view = "settings"; S.page = -1;
+  shell(-1, "设置与维护", "日常设置与维护操作集中在这里，角色资料由你保留。", `
+    <section class="panel"><div class="panel-heading"><h2>控制台</h2><span class="quiet">高级管理入口</span></div><div class="settings-row"><div><strong>角色与能力控制台</strong><p>查看会话、插件与引擎配置。</p></div><a class="button-link" id="dashboard-console" target="_blank" rel="noopener" hidden>打开控制台 ${icon("arrow")}</a></div><div class="settings-row"><div><strong>QQ 通道控制台</strong><p>查看协议端、连接和账号状态。</p></div><a class="button-link" id="qq-console" target="_blank" rel="noopener" hidden>打开控制台 ${icon("arrow")}</a></div><details class="help"><summary>查看控制台登录凭据</summary><button id="reveal-credentials">显示管理凭据</button><dl id="credentials" class="info" hidden></dl><p>仅在自己电脑上查看，不要公开截图或分享凭据。</p></details></section>
+    <section class="panel"><div class="panel-heading"><h2>账号与运行</h2></div><div class="settings-row"><div><strong>切换 QQ 账号</strong><p>退出当前小号并重新扫码，角色资料会保留。</p></div><button id="switch-qq">切换账号</button></div><div class="settings-row"><div><strong>停止服务并退出</strong><p>暂停角色与任务服务，下次打开可以重新联动。</p></div><button id="quit">停止并退出</button></div></section>
+    <details class="panel danger-zone"><summary>卸载与数据移除</summary><p>卸载会删除安装目录中的角色资料和记录，请先自行备份重要内容。</p><button class="danger-ghost" id="uninstall">卸载织灵</button></details><div id="serr" class="msg bad" role="alert"></div>`, "");
+  bindMaintenance();
+  const consoles = await api("/api/consoles");
+  for (const [id, url] of [["#dashboard-console",consoles.dashboard_url],["#qq-console",consoles.napcat_url]]) {
+    const node = $(id); if (node && /^http:\/\/127\.0\.0\.1:\d+$/.test(url || "")) { node.href = url; node.hidden = false; }
+  }
+  const reveal = $("#reveal-credentials");
+  if (reveal) reveal.onclick = async () => { const r = await api("/api/done"); if (!$("#credentials")) return; $("#credentials").innerHTML = `<dt>账号</dt><dd>${esc(r.username)}</dd><dt>密码</dt><dd>${esc(r.password)}</dd>`; $("#credentials").hidden = false; };
+}
+
+function bindMaintenance() {
   $("#switch-qq").onclick = async () => {
     const yes = await confirmBox({
       title: "退出小号 / 换一个",
@@ -551,35 +628,6 @@ async function pageStatus() {
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
     $("#fin").onclick = () => window.close();
   };
-  let qrPolling = false;
-  const tick = async () => {
-    const s = await api("/api/status");
-    if (!$("#stext")) return;
-    const running = s.astrbot && s.napcat;
-    let text, dot;
-    if (s.starting) [text, dot] = ["正在启动，大概一分钟…", "wait"];
-    else if (!running) [text, dot] = ["服务已停止", "off"];
-    else if (s.login === "online") [text, dot] = [`在线${s.qq ? "（小号 " + s.qq + "）" : ""}`, "on"];
-    else if (s.login === "need_scan" || s.login === "scanned" || s.login === "error") [text, dot] = ["要重新扫码登录", "wait"];
-    else [text, dot] = ["正在连接 QQ…", "wait"];
-    $("#stext").textContent = text;
-    $("#sdot").className = "dot " + dot;
-    $("#serr").textContent = s.error || "";
-    $("#up").disabled = running || s.starting || s.agent_preparing;
-    $("#down").disabled = (!s.astrbot && !s.napcat) || s.agent_preparing;
-    ["quit", "switch-qq", "uninstall"].forEach(id => $("#" + id).disabled = !!s.agent_preparing);
-    const needQR = running && ["need_scan", "scanned", "error"].includes(s.login);
-    $("#sqr").hidden = !needQR;
-    if (needQR && !qrPolling) {
-      qrPolling = true;
-      bindRefreshQR();
-      pollLogin(() => {});
-    }
-  };
-  tick();
-  S.timers.push(setInterval(tick, 3000));
-  const s = await api("/api/status");
-  if (!s.astrbot && !s.napcat && !s.starting) { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); }
 }
 
 // 改完设置：原地等重启，不要把人甩回安装向导
@@ -626,6 +674,7 @@ function renderApplying() {
 
 // ---------------- Agent 任务 ----------------
 async function pageAgent() {
+  S.view = "agent";
   clearTimers();
   S.page = -2;
   shell(-1, "Agent 任务", "日常聊天保留角色表达；需要执行任务时，通过 /dsh 交给 Agent。", `
@@ -671,7 +720,7 @@ async function pageAgent() {
 (async () => {
   S.info = await api("/api/info");
   if (!S.info || !S.info.mode) {
-    $("#app").innerHTML = `<div class="shell"><main class="main"><h1>出错了</h1><p class="sub" style="white-space:pre-wrap">${esc(S.info?.message || "打不开安装程序")}</p></main></div>`;
+    $("#app").innerHTML = `<div class="empty-screen"><main class="main"><h1>暂时无法打开工作区</h1><p class="sub" style="white-space:pre-wrap">${esc(S.info?.message || "打不开安装程序")}</p></main></div>`;
     return;
   }
   S.mode = S.info.mode;
