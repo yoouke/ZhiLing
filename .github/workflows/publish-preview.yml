@@ -1,0 +1,44 @@
+name: 发布已验证开发预览
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 成功的安装包构建编号
+        required: true
+      smoke_run_id:
+        description: 成功的成品启动检查编号
+        required: true
+permissions:
+  contents: write
+  actions: read
+  checks: read
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: ZhiLing-Windows-x64-candidate
+          path: candidate
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: ZhiLing-installer-startup-proof
+          path: proof
+          run-id: ${{ inputs.smoke_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify matching installer, successful checks and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          SMOKE_RUN_ID: ${{ inputs.smoke_run_id }}
+        run: python -u -X utf8 dev/publish_candidate.py --build "$env:BUILD_RUN_ID" --smoke "$env:SMOKE_RUN_ID"
