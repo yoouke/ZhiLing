@@ -294,6 +294,14 @@ def step_login(ctx: Ctx) -> None:
     st.save()
 
 
+def ensure_agent(ctx: Ctx) -> None:
+    if ctx.state.data.get("agent_enabled"):
+        from agent import Engine
+        engine = Engine(ctx.root, ctx.state, ctx.log)
+        engine.start()
+        engine.wait_ready()
+
+
 def default_steps() -> list[Step]:
     return [
         Step("extract", "解压运行环境和程序", step_extract),
@@ -302,6 +310,7 @@ def default_steps() -> list[Step]:
         Step("astrbot", "启动 AstrBot（她的大脑）", ensure_astrbot),
         Step("napcat", "启动 NapCat（登 QQ 用）", ensure_napcat),
         Step("import", "装上人设、插件、表情包、语音、记忆", step_import),
+        Step("agent", "检查已启用的 Agent 引擎与桥接", ensure_agent),
         Step("shortcut", "在桌面放「启动织灵」", step_shortcut),
         Step("login", "等你扫码登录小号", step_login),
     ]

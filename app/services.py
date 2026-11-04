@@ -48,7 +48,8 @@ def _spawn(name: str, argv: list[str], cwd: Path, env_extra: dict, layout: Layou
 
 def start_astrbot(layout: Layout, state) -> int:
     return _spawn("astrbot", [str(layout.python), "main.py"], layout.astrbot,
-                  {"ASTRBOT_ROOT": str(layout.astrbot), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
+                  {"ASTRBOT_ROOT": str(layout.astrbot), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
+                   "DSH_INGRESS_BEACON": str(layout.root / "engines" / "dsh" / "home" / "astrbot-ingress.json")},
                   layout, state)
 
 

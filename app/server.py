@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+import agent
 import checks
 import installer
 import personalize
@@ -39,6 +40,8 @@ class App:
         self.root = self.state = self.installer = None
         self._web = None
         self._starter = None
+        self._agent_worker = None
+        self._agent_error = ""
         if root:
             self._open(Path(root))
 
@@ -249,26 +252,84 @@ class App:
                 "login": login, "starting": starting, "error": err, "qq": self.state.data.get("qq") or ""}
 
     def handle_start(self, _b) -> dict:
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成"}
         with self._lock:
             if not (self._starter and self._starter.progress()["running"]):
                 self._starter = installer.Installer(self.root, self.state, resume=False, boot=self.boot, steps=[
                     installer.Step("astrbot", "启动 AstrBot", installer.ensure_astrbot),
-                    installer.Step("napcat", "启动 NapCat", installer.ensure_napcat)])
+                    installer.Step("napcat", "启动 NapCat", installer.ensure_napcat),
+                    installer.Step("agent", "检查 Agent 引擎与桥接", installer.ensure_agent)])
                 self._starter.start()
         return {"ok": True}
 
+    def handle_agent_status(self, _q) -> dict:
+        result = agent.Engine(self.root, self.state, self.installer.log).status()
+        result.update(busy=bool(self._agent_worker and self._agent_worker.is_alive()), error=self._agent_error)
+        return result
+
+    def handle_agent(self, body) -> dict:
+        action = body.get("action")
+        if action not in ("prepare", "start", "stop"):
+            return {"ok": False, "message": "未知 Agent 操作"}
+        with self._lock:
+            if self._agent_worker and self._agent_worker.is_alive():
+                return {"ok": False, "message": "Agent 正在准备，请等待当前操作完成"}
+            if self.installer.progress()["running"] or (self._starter and self._starter.progress()["running"]):
+                return {"ok": False, "message": "请先等待安装或服务启动完成"}
+            if not self.state.is_done("import"):
+                return {"ok": False, "message": "请先完成基础安装和角色配置"}
+            if action == "stop":
+                self.state.data["agent_enabled"] = False
+                self.state.save()
+                services.stop(self.state, "dsh")
+                return {"ok": True}
+            if not self.state.get_secret("deepseek"):
+                return {"ok": False, "message": "请先保存运行模型 API 配置"}
+            self._agent_error = ""
+
+            def work():
+                engine = agent.Engine(self.root, self.state, self.installer.log)
+                try:
+                    if action == "prepare":
+                        services.stop(self.state, "dsh")
+                        engine.prepare()
+                        services.stop(self.state, "astrbot")
+                        services.start_astrbot(self.layout, self.state)
+                    engine.start()
+                    engine.wait_ready()
+                    self.state.data["agent_enabled"] = True
+                    self.state.save()
+                except Exception as exc:
+                    from store import redact
+                    self._agent_error = redact(str(exc), self.state.secret_values())
+                    self.installer.log("Agent 准备失败：" + self._agent_error)
+                    services.stop(self.state, "dsh")
+                    self.state.data["agent_enabled"] = False
+                    self.state.save()
+
+            self._agent_worker = threading.Thread(target=work, daemon=True)
+            self._agent_worker.start()
+        return {"ok": True}
+
     def handle_stop(self, _b) -> dict:
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成后再操作服务"}
         services.stop_all(self.state)
         return {"ok": True}
 
     def handle_switch_qq(self, _b) -> dict:
         """换小号 / 退出小号：忘掉当前登录，回到扫码。"""
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成后再操作服务"}
         services.clear_qq_login(self.layout, self.state)
         self._web = None
         return {"ok": True}
 
     def handle_uninstall(self, _b) -> dict:
         """彻底卸载：停服务、删快捷方式，退出后由清理脚本删掉安装目录。"""
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成后再操作服务"}
         import uninstall
         uninstall.uninstall(self.root, self.state, home=self.home)
         self.quitting = True  # 清理脚本在等我们退出，之后才能删掉安装目录
@@ -276,14 +337,18 @@ class App:
 
     def handle_quit(self, _b) -> dict:
         """一键停掉所有服务并退出（相当于关掉 app）。"""
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成后再操作服务"}
         services.stop_all(self.state)
         self.quitting = True
         return {"ok": True}
 
     def handle_apply(self, _b) -> dict:
         """改完设置：停掉、重写配置、重新导入、重新登录。"""
+        if self._agent_worker and self._agent_worker.is_alive():
+            return {"ok": False, "message": "Agent 正在部署，请等待完成后再操作服务"}
         services.stop_all(self.state)
-        self.installer.redo(["configs", "astrbot", "napcat", "import", "login"])
+        self.installer.redo(["configs", "astrbot", "napcat", "import", "agent", "login"])
         return {"ok": True}
 
     def handle_ping(self, _b) -> dict:
@@ -291,13 +356,13 @@ class App:
         return {"ok": True}
 
     GET = {"/api/info": handle_info, "/api/progress": handle_progress, "/api/login": handle_login,
-           "/api/done": handle_done, "/api/status": handle_status}
+           "/api/done": handle_done, "/api/status": handle_status, "/api/agent": handle_agent_status}
     POST = {"/api/path": handle_path, "/api/check": handle_check, "/api/keys": handle_keys,
             "/api/preview_voice": handle_preview_voice, "/api/profile": handle_profile,
             "/api/retry": handle_retry, "/api/start": handle_start, "/api/stop": handle_stop,
             "/api/apply": handle_apply, "/api/ping": handle_ping,
             "/api/refresh_qr": handle_refresh_qr, "/api/switch_qq": handle_switch_qq,
-            "/api/quit": handle_quit, "/api/uninstall": handle_uninstall}
+            "/api/agent": handle_agent, "/api/quit": handle_quit, "/api/uninstall": handle_uninstall}
 
 
 class Handler(BaseHTTPRequestHandler):
