@@ -4,12 +4,12 @@
 
 ## Windows 回归
 
-Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。新增 Agent 后完整回归为 **116 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式，以及部署期间冲突操作保护。
+Windows Server 2025 runner 执行 Python 完整测试和 JavaScript 语法检查。新增 Agent 后完整回归为 **118 项**，包括安装恢复、配置导入、DPAPI、凭据脱敏、服务与本机 API、原文人格保留、中文快捷方式、部署期间冲突操作保护、空白角色成品配置，以及实际 Windows EXE 图标和中文产品属性。
 
-- [提示词文档导入后的成功回归](https://github.com/yoouke/ZhiLing/actions/runs/41749951125)
+- [118 项 Windows 原生检查成功记录](https://github.com/yoouke/ZhiLing/actions/runs/41756104737)
 - [持续集成列表](https://github.com/yoouke/ZhiLing/actions)
 
-中文快捷方式使用实际 Windows Shell Link 保存，测试读取真实文件中的 Unicode 参数，同时核对目标程序、图标和工作目录。不是只检查文件名存在。
+中文快捷方式使用实际 Windows Shell Link 保存，测试读取真实文件中的 Unicode 参数，同时核对目标程序、图标和工作目录。不是只检查文件名存在。安装器资源测试读取实际 PE 图标字节，并调用 Windows 版本信息 API 核对产品名与原始文件名。
 
 Agent 接口测试启动本机 HTTP 服务，确认错误令牌与过期认证文件不能通过健康检查；它是协议边界测试，不是 DSH/QQ 真实消息验收。
 
