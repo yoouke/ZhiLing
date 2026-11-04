@@ -249,7 +249,8 @@ class App:
         login = self.login_status()
         self.remember_qq(login)
         return {"astrbot": services.is_running(pids.get("astrbot")), "napcat": services.is_running(pids.get("napcat")),
-                "login": login, "starting": starting, "error": err, "qq": self.state.data.get("qq") or ""}
+                "login": login, "starting": starting,
+                "agent_preparing": bool(self._agent_worker and self._agent_worker.is_alive()), "error": err, "qq": self.state.data.get("qq") or ""}
 
     def handle_start(self, _b) -> dict:
         if self._agent_worker and self._agent_worker.is_alive():

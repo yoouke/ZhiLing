@@ -109,6 +109,8 @@ def main() -> None:
                 break
             busy = app.installer is not None and app.installer.progress()["running"] \
                 and app.installer.progress()["waiting"] is None
+            busy = busy or bool(app._agent_worker and app._agent_worker.is_alive()) \
+                or bool(app._starter and app._starter.progress()["running"])
             if not busy and time.monotonic() - app.last_ping > IDLE_EXIT_S:
                 break
     finally:
