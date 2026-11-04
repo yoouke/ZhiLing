@@ -1,0 +1,28 @@
+name: 织灵 Windows 安装包
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Prepare build tools
+        run: python -m pip install -r build/requirements.txt
+      - name: Build application from official components
+        run: python -u -X utf8 build/build.py --out dist
+      - name: Upload candidate installer and checksum
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ZhiLing-Windows-x64-candidate
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
