@@ -473,8 +473,8 @@ async function pageStatus() {
       <button class="danger-ghost" id="uninstall">彻底卸载</button>
     </div>
     <div class="msg">「停掉她并退出」只是让她下线，桌面图标还在，随时双击让她回来。「彻底卸载」会删掉全部文件。</div></div>`, "");
-  $("#up").onclick = async () => { await api("/api/start", {}); tick(); };
-  $("#down").onclick = async () => { await api("/api/stop", {}); tick(); };
+  $("#up").onclick = async () => { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
+  $("#down").onclick = async () => { const r = await api("/api/stop", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); };
   $("#edit-keys").onclick = () => { clearTimers(); pageKeys(); };
   $("#edit-prof").onclick = () => { clearTimers(); pageProfile(); };
   $("#agent-settings").onclick = pageAgent;
@@ -488,8 +488,10 @@ async function pageStatus() {
       ok: "退出登录",
     });
     if (!yes) return;
-    await api("/api/switch_qq", {});
-    await api("/api/start", {});
+    const r = await api("/api/switch_qq", {});
+    if (!r.ok) return ($("#serr").textContent = r.message);
+    const started = await api("/api/start", {});
+    if (!started.ok) return ($("#serr").textContent = started.message);
     pageRescan();
   };
   $("#quit").onclick = async () => {
@@ -500,7 +502,8 @@ async function pageStatus() {
       ok: "停掉并退出",
     });
     if (!yes) return;
-    await api("/api/quit", {});
+    const r = await api("/api/quit", {});
+    if (!r.ok) return ($("#serr").textContent = r.message);
     shell(-1, "她下线了", "已经全部停掉。", `
       <div class="note">想让她回来，双击桌面的「启动织灵」。这个窗口可以关了。</div>`,
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
@@ -546,8 +549,9 @@ async function pageStatus() {
     $("#stext").textContent = text;
     $("#sdot").className = "dot " + dot;
     $("#serr").textContent = s.error || "";
-    $("#up").disabled = running || s.starting;
-    $("#down").disabled = !s.astrbot && !s.napcat;
+    $("#up").disabled = running || s.starting || s.agent_preparing;
+    $("#down").disabled = (!s.astrbot && !s.napcat) || s.agent_preparing;
+    ["quit", "switch-qq", "uninstall"].forEach(id => $("#" + id).disabled = !!s.agent_preparing);
     const needQR = running && ["need_scan", "scanned", "error"].includes(s.login);
     $("#sqr").hidden = !needQR;
     if (needQR && !qrPolling) {
@@ -559,7 +563,7 @@ async function pageStatus() {
   tick();
   S.timers.push(setInterval(tick, 3000));
   const s = await api("/api/status");
-  if (!s.astrbot && !s.napcat && !s.starting) { await api("/api/start", {}); tick(); }
+  if (!s.astrbot && !s.napcat && !s.starting) { const r = await api("/api/start", {}); if (!r.ok) $("#serr").textContent = r.message; else tick(); }
 }
 
 // 改完设置：原地等重启，不要把人甩回安装向导
@@ -572,7 +576,8 @@ async function applySettings() {
     <div id="msg" class="msg bad" role="alert"></div>`,
     `<span></span><button class="primary" id="retry" hidden>重试</button>`);
   $("#retry").onclick = async () => { await api("/api/retry", {}); $("#retry").hidden = true; };
-  await api("/api/apply", {});
+  const applied = await api("/api/apply", {});
+  if (!applied.ok) { $("#msg").textContent = applied.message; return; }
   const tick = async () => {
     S.progress = await api("/api/progress");
     if (!$("#tasks")) return;
