@@ -18,4 +18,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Deploy real engine and verify authenticated bridge
-        run: python dev/agent_smoke.py
+        run: python -X utf8 dev/agent_smoke.py
