@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import urllib.error
 import urllib.request
 
 
@@ -16,10 +18,12 @@ def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     token = os.environ["GH_TOKEN"]
 
-    def api(path):
+    def api(path, *, method="GET", body=None):
         req = urllib.request.Request("https://api.github.com/repos/" + repo + path,
                                      headers={"Authorization": "Bearer " + token,
-                                              "Accept": "application/vnd.github+json"})
+                                              "Accept": "application/vnd.github+json",
+                                              "Content-Type": "application/json"},
+                                     method=method, data=json.dumps(body).encode("utf-8") if body is not None else None)
         with urllib.request.urlopen(req, timeout=30) as response:
             return json.load(response)
 
@@ -47,20 +51,47 @@ def main():
 
 尚未完成：多人格运行隔离、AI 讨论与联网创作、SnowLuma 分支、多平台统一管理、完整监控及 DIY。QQ 扫码、真实模型与语音授权、Win10/11 桌面完整流程仍待验收。此版本不是 PRD 完整版。
 
-下载「织灵.exe」并在 Windows 运行；SHA256SUMS.txt 用于校验。BUILD_INFO.json 与 SMOKE_REPORT.json 记录对应成品检查范围。组件许可见随附 THIRD_PARTY_NOTICES.md。
+下载「ZhiLing.exe」（织灵安装程序）并在 Windows x64 运行；SHA256SUMS.txt 用于校验。BUILD_INFO.json 与 SMOKE_REPORT.json 记录对应成品检查范围。组件许可见随附 THIRD_PARTY_NOTICES.md。
 
 构建提交：{build['head_sha']}
 构建记录：{build['html_url']}
 成品启动检查：{smoke['html_url']}
 ''', encoding="utf-8")
     tag = "v0.1.0-dev"
-    # Deliberately do not use --clobber or edit an existing release.
-    subprocess.run(["gh", "release", "create", tag, "--repo", repo, "--target", build["head_sha"],
-                    "--draft", "--prerelease", "--title", "织灵 0.1.0 开发预览", "--notes-file", str(notes),
-                    str(installer), "candidate/SHA256SUMS.txt", "candidate/BUILD_INFO.json",
-                    "proof/SMOKE_REPORT.json", "proof/welcome.png"], check=True)
-    subprocess.run(["gh", "release", "edit", tag, "--repo", repo, "--draft=false",
+    # GitHub sanitizes names containing only non-ASCII characters. Publish a
+    # stable ASCII filename while retaining the Chinese product label.
+    public_installer = Path("ZhiLing.exe")
+    shutil.copy2(installer, public_installer)
+    checksum = Path("SHA256SUMS.txt")
+    checksum.write_text(digest + "  ZhiLing.exe\n", encoding="utf-8")
+    try:
+        existing = api("/releases/tags/" + tag)
+    except urllib.error.HTTPError as error:
+        if error.code != 404:
+            raise
+        existing = None
+    if existing:
+        # A retry may repair labels/documentation for this exact verified build.
+        # Never replace an installer with different bytes or change its tag.
+        assert existing["prerelease"] and existing["target_commitish"] == build["head_sha"]
+        assets = {item["name"]: item for item in existing["assets"]}
+        executable = next((item for name, item in assets.items()
+                           if name in ("default.exe", "织灵.exe", "ZhiLing.exe")), None)
+        assert executable and executable["digest"] == "sha256:" + digest, "Existing installer differs"
+        for name, path in (("BUILD_INFO.json", "candidate/BUILD_INFO.json"),
+                           ("SMOKE_REPORT.json", "proof/SMOKE_REPORT.json"), ("welcome.png", "proof/welcome.png")):
+            assert assets[name]["digest"] == "sha256:" + hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        api("/releases/assets/" + str(executable["id"]), method="PATCH",
+            body={"name": "ZhiLing.exe", "label": "织灵 · Windows x64 安装程序"})
+        subprocess.run(["gh", "release", "upload", tag, str(checksum), "--repo", repo, "--clobber"], check=True)
+    else:
+        subprocess.run(["gh", "release", "create", tag, "--repo", repo, "--target", build["head_sha"],
+                        "--draft", "--prerelease", "--title", "织灵 0.1.0 开发预览", "--notes-file", str(notes),
+                        str(public_installer) + "#织灵 · Windows x64 安装程序", str(checksum), "candidate/BUILD_INFO.json",
+                        "proof/SMOKE_REPORT.json", "proof/welcome.png"], check=True)
+    subprocess.run(["gh", "release", "edit", tag, "--repo", repo, "--draft=false", "--notes-file", str(notes),
                     "--prerelease", "--latest=false"], check=True)
+
 
 
 if __name__ == "__main__":
