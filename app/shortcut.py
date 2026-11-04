@@ -12,6 +12,7 @@ _PS = (
     "$s.TargetPath = $env:SC_TARGET; $s.Arguments = $env:SC_ARGS;"
     "$s.WorkingDirectory = $env:SC_WORKDIR; $s.IconLocation = $env:SC_ICON + ',0';"
     "$s.Save();"
+    "if (-not (Test-Path -LiteralPath $p)) { throw ('Shortcut was not saved: ' + $p) };"
     "[Console]::OutputEncoding = [Text.Encoding]::UTF8; $p"
 )
 
