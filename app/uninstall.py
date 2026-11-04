@@ -64,7 +64,7 @@ def uninstall(root: Path, state, home: Path | None = None, desktop: Path | None 
     except OSError:
         pass  # 快捷方式删不掉不该挡住卸载
     services.forget_qq_account(services.Layout(root), state.data.get("qq", ""), state.data.get("owner_qq", ""))
-    bat = Path(tempfile.gettempdir()) / "dafeiyu-uninstall.bat"
+    bat = Path(tempfile.gettempdir()) / "zhiling-uninstall.bat"
     bat.write_text(_BAT.format(pid=os.getpid(),
                                removes="\n".join(_REMOVE.format(path=p) for p in paths),
                                checks=" ".join(f'if not exist "{p}"' for p in paths) or "if 1==1"),

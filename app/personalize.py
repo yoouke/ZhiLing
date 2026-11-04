@@ -8,7 +8,8 @@ VOICE_PRESETS = [
     ("御姐", "二十多岁的成熟女生，声音低一点、慵懒有磁性，说话不紧不慢，偶尔带点调侃"),
     ("元气少年", "十几岁的阳光男生，声音清亮有活力，说话快、爱笑，有点小得意"),
 ]
-PERSONA = Path("persona") / "大肥鱼.md"
+PERSONA = Path("persona") / "character.md"
+LEGACY_PERSONA = Path("persona") / "大肥鱼.md"
 PACK_JSON = Path("settings") / "pack.json"
 
 
@@ -55,10 +56,40 @@ def validate_profile(profile: dict) -> str | None:
     return None
 
 
+def prepare_pack(pack_dir: Path, *, blank: bool = False) -> None:
+    """Use a product-owned runtime manifest without changing third-party plugin IDs."""
+    pack = _read_json(pack_dir / PACK_JSON)
+    pack["persona"] = {"id": "zhiling-character", "file": PERSONA.as_posix()}
+    pack.setdefault("base", {})["agent_runner.config.persona.persona_id"] = "zhiling-character"
+    path = pack_dir / PERSONA
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if blank:
+        path.write_text("", encoding="utf-8")
+        for section in (pack.get("memory", {}), pack.get("voice", {})):
+            for item in section.values():
+                if isinstance(item, dict):
+                    if isinstance(item.get("id"), str):
+                        item["id"] = item["id"].replace("大肥鱼记忆-", "织灵记忆-").replace("大肥鱼语音-", "织灵语音-")
+                    if "persona" in item:
+                        item["persona"] = ""
+        if "breeze" in pack.get("voice", {}):
+            pack["voice"]["breeze"]["voice"] = ""
+    elif not path.exists():
+        legacy = pack_dir / LEGACY_PERSONA
+        path.write_text(legacy.read_text(encoding="utf-8") if legacy.exists() else "", encoding="utf-8")
+    (pack_dir / LEGACY_PERSONA).unlink(missing_ok=True)
+    (pack_dir / PACK_JSON).write_text(json.dumps(pack, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def import_tool(pack_dir: Path) -> Path:
+    current = pack_dir / "tools" / "import_character.py"
+    return current if current.exists() else pack_dir / "tools" / "import_dafeiyu.py"
+
+
 def apply_profile(pack_dir: Path, profile: dict) -> None:
     if err := validate_profile(profile):
         raise ValueError(err)
-    name = profile["name"].strip()
+    prepare_pack(pack_dir)
     voice = profile["voice"].strip()
     persona = profile["persona"].strip()
     memes = profile["memes"]

@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import agent
 import checks
+import configs
 import installer
 import personalize
 import services
@@ -223,7 +224,7 @@ class App:
 
     def handle_done(self, _q) -> dict:
         info = {"dashboard_url": f"http://127.0.0.1:{self.state.data['ports']['dashboard']}",
-                "username": "dafeiyu", "password": self.state.get_secret("dashboard_password"),
+                "username": configs.dashboard_user(self.layout.astrbot_data), "password": self.state.get_secret("dashboard_password"),
                 "qq": self.state.data.get("qq", "")}
         (self.root / "我的信息.txt").write_text(
             "织灵管理信息（请勿分享）\n"

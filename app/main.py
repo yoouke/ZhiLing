@@ -1,7 +1,7 @@
 """一键包入口。
 
 安装：pythonw app\\main.py            （自解压后从临时目录运行）
-状态：pythonw app\\main.py --status --root D:\\DaFeiYu   （桌面快捷方式）
+状态：pythonw app\\main.py --status --root D:\\ZhiLing   （桌面快捷方式）
 """
 import argparse
 import json

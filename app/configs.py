@@ -10,8 +10,8 @@ from pathlib import Path
 
 from checks import free_port
 
-DASHBOARD_USER = "dafeiyu"
-PLATFORM_ID = "dafeiyu"
+DASHBOARD_USER = "zhiling"
+PLATFORM_ID = "zhiling"
 SOURCE_ID = "deepseek_source"
 CHAT_MODEL = "deepseek-flash"
 CHAT_PROVIDER_ID = f"deepseek/{CHAT_MODEL}"
@@ -65,6 +65,20 @@ def _upsert(items: list, item: dict) -> list:
     return items + [item]
 
 
+def dashboard_user(data_dir: Path) -> str:
+    """Read the live account name until an existing installation is reconfigured."""
+    return str(_read(Path(data_dir) / "cmd_config.json").get("dashboard", {}).get("username") or DASHBOARD_USER)
+
+
+def managed_platform_id(conf: dict) -> str:
+    # Existing memories and owner bindings include this ID. Keep old channel IDs
+    # on upgrades rather than creating a second QQ route and orphaning sessions.
+    for item in conf.get("platform", []):
+        if isinstance(item, dict) and item.get("type", "aiocqhttp") == "aiocqhttp" and item.get("id") in (PLATFORM_ID, "dafeiyu"):
+            return item["id"]
+    return PLATFORM_ID
+
+
 def write_astrbot_config(data_dir: Path, *, ports: dict, secrets: dict, deepseek_key: str) -> None:
     path = Path(data_dir) / "cmd_config.json"
     conf = _read(path)
@@ -75,7 +89,7 @@ def write_astrbot_config(data_dir: Path, *, ports: dict, secrets: dict, deepseek
         "jwt_secret": secrets["jwt_secret"], "host": "127.0.0.1", "port": ports["dashboard"],
     })
     conf["platform"] = _upsert(conf.get("platform", []), {
-        "id": PLATFORM_ID, "type": "aiocqhttp", "enable": True, "ws_reverse_host": "127.0.0.1",
+        "id": managed_platform_id(conf), "type": "aiocqhttp", "enable": True, "ws_reverse_host": "127.0.0.1",
         "ws_reverse_port": ports["onebot"], "ws_reverse_token": secrets["onebot_token"],
     })
     conf["provider_sources"] = _upsert(conf.get("provider_sources", []), {

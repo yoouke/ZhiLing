@@ -163,7 +163,8 @@ def extracted_ok(root: Path) -> bool:
     会跳过解压，后面每步都对着空目录失败，重试也出不来。"""
     layout = services.Layout(root)
     return all(p.exists() for p in (layout.python, layout.astrbot / "main.py",
-                                    layout.pack / personalize.PERSONA, layout.napcat / "node.exe"))
+                                    layout.pack / "settings" / "pack.json", layout.napcat / "node.exe")) and any(
+        (layout.pack / persona).exists() for persona in (personalize.PERSONA, personalize.LEGACY_PERSONA))
 
 
 def _tree_hash(root: Path) -> str:
@@ -253,12 +254,12 @@ def step_import(ctx: Ctx) -> None:
     answers, result = work / "answers.json", work / "result.json"
     work.mkdir(exist_ok=True)
     try:
-        personalize.write_answers(answers, base_url=_urls(st)["dashboard"], username=configs.DASHBOARD_USER,
+        personalize.write_answers(answers, base_url=_urls(st)["dashboard"], username=configs.dashboard_user(layout.astrbot_data),
                                   password=st.get_secret("dashboard_password"), owner_qq=st.data["owner_qq"],
                                   secrets_dir=secrets_dir, sf_key=st.get_secret("siliconflow"),
                                   app_id=st.get_secret("doubao_app_id"), token=st.get_secret("doubao_token"))
         result.unlink(missing_ok=True)
-        r = subprocess.run([str(layout.python), "-X", "utf8", str(layout.pack / "tools" / "import_dafeiyu.py"),
+        r = subprocess.run([str(layout.python), "-X", "utf8", str(personalize.import_tool(layout.pack)),
                             "--answers", str(answers), "--result-json", str(result)],
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600,
                            creationflags=services.CREATE_NO_WINDOW)
