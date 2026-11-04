@@ -13,7 +13,7 @@ from pathlib import Path
 
 import services
 
-NODE_VERSION = "24.11.1"
+NODE_VERSION = "24.22.2"
 DSH_VERSION = "0.2.1-rc.5"
 PNPM_VERSION = "10.28.2"
 BRIDGE_VERSION = "0.3.23"
@@ -118,9 +118,15 @@ class Engine:
         ports = self.state.data.setdefault("agent_ports", {})
         for name in ("web", "bridge"):
             if name not in ports:
-                with socket.socket() as sock:
-                    sock.bind(("127.0.0.1", 0))
-                    ports[name] = sock.getsockname()[1]
+                for _ in range(20):
+                    with socket.socket() as sock:
+                        sock.bind(("127.0.0.1", 0))
+                        candidate = sock.getsockname()[1]
+                    if candidate not in ports.values():
+                        ports[name] = candidate
+                        break
+                else:
+                    raise RuntimeError("未能分配独立 Agent 端口")
         self.state.save()
         self.workspace.mkdir(parents=True, exist_ok=True)
         # JSON is valid YAML and avoids interpolating Windows paths into YAML.
