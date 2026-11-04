@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -20,7 +21,13 @@ class ShortcutTest(unittest.TestCase):
             lnk = shortcut.create_shortcut(target, args, "启动织灵", icon, desktop=d)
             self.assertEqual(lnk, d / "启动织灵.lnk")
             self.assertTrue(lnk.exists(), f"Expected {lnk!s}; actual files: {[x.name for x in d.iterdir()]}")
-            env = dict(os.environ, LNK=str(lnk))
+            # WScript's legacy path handling also fails when reading a Unicode
+            # filename. Inspect an exact byte-for-byte ASCII alias of the link;
+            # keep all target/argument/icon checks against the real saved data.
+            inspect_path = d / "inspect.lnk"
+            shutil.copyfile(lnk, inspect_path)
+            self.assertEqual(inspect_path.read_bytes(), lnk.read_bytes())
+            env = dict(os.environ, LNK=str(inspect_path))
             out = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  "$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
