@@ -21,9 +21,9 @@ QR = (ROOT / "app" / "web" / "img" / "favicon.png").read_bytes()
 class FakeChecks:
     @staticmethod
     def check_install_path(p):
-        return None if p.isascii() and " " not in p and p[1:3] == ":\\" else "路径里不能有中文和空格，换一个，比如 D:\\DaFeiYu"
+        return None if p.isascii() and " " not in p and p[1:3] == ":\\" else "路径里不能有中文和空格，换一个，比如 D:\\ZhiLing"
 
-    default_install_path = staticmethod(lambda: "D:\\DaFeiYu")
+    default_install_path = staticmethod(lambda: "D:\\ZhiLing")
 
     @staticmethod
     def check_deepseek(k):
@@ -68,7 +68,7 @@ def steps():
             Step("configs", "写入你的 key 和连接设置", wait("keys")), Step("astrbot", "启动 AstrBot（她的大脑）", slow(2)),
             Step("napcat", "启动 NapCat（登 QQ 用）", slow(1.5)),
             Step("import", "装上人设、插件、表情包、语音、记忆", lambda c: (c.wait_for("profile"), slow(3, True)(c))),
-            Step("shortcut", "在桌面放「启动大肥鱼」", slow(0.5)), Step("login", "等你扫码登录小号", login)]
+            Step("shortcut", "在桌面放「启动织灵」", slow(0.5)), Step("login", "等你扫码登录小号", login)]
 
 
 LOGIN = {"since": None}
@@ -89,7 +89,7 @@ def main():
     mode = "status" if "--status" in sys.argv else "install"
     root = None
     if mode == "status":
-        root = tmp / "DaFeiYu"
+        root = tmp / "ZhiLing"
         root.mkdir()
         (root / "state.json").write_text('{"done":[],"secrets":{},"ports":{"dashboard":6185,"onebot":6199,"napcat_webui":6099}}')
         LOGIN["since"] = time.monotonic()
