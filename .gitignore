@@ -6,3 +6,11 @@ __pycache__/
 *.pyc
 .superpowers/
 .DS_Store
+
+# Local application state, model credentials and user-created characters
+state.json
+Characters/
+engines/
+agent-workspace/
+logs/
+.import/
