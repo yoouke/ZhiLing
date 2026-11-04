@@ -44,7 +44,7 @@ def fix_plugin_imports(astrbot_data: Path) -> None:
 
 def validate_profile(profile: dict) -> str | None:
     if not str(profile.get("name") or "").strip():
-        return "给她起个名字吧"
+        return "请填写角色名字"
     if len(str(profile.get("name")).strip()) > 20:
         return "名字太长了，20 个字以内"
     if not str(profile.get("persona") or "").strip():

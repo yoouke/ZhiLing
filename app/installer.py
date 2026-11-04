@@ -200,7 +200,7 @@ def step_extract(ctx: Ctx) -> None:
     payload = ctx.boot / "payload.7z"
     seven = ctx.boot / "7zr.exe"
     if not payload.exists() or not seven.exists():
-        raise InstallError("安装包不完整，重新下载一键包再试")
+        raise InstallError("安装包不完整，请重新下载织灵安装程序")
     ctx.root.mkdir(parents=True, exist_ok=True)
     r = subprocess.run([str(seven), "x", str(payload), f"-o{ctx.root}", "-y", "-bso0", "-bsp0"],
                        capture_output=True, text=True, errors="replace", creationflags=services.CREATE_NO_WINDOW)
