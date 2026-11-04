@@ -299,6 +299,8 @@ def main() -> None:
     shutil.rmtree(stage, ignore_errors=True)
     assemble(stage, dl)
     clean(stage, prewarm(stage))
+    import personalize
+    personalize.fix_plugin_imports(stage / "astrbot" / "data")
     report = audit_payload(stage)
     exe = package(stage, dl, Path(args.out))
     report["installer_sha256"] = hashlib.sha256(exe.read_bytes()).hexdigest()
