@@ -351,7 +351,7 @@ function pageTasks() {
   S.page = 3;
   shell(3, "正在安装", "全部在后台自动完成。中途弹出 Windows 安全提示或防火墙提示，点「允许」或「运行」。", `
     <ul class="tasks" id="tasks"></ul>
-    <div class="note">关掉窗口也没关系，下次双击一键包、选同一个位置，会接着装。</div>`,
+    <div class="note">关掉窗口也没关系，下次打开织灵、选择同一个安装位置，会接着装。</div>`,
     `<span></span><button class="primary" id="retry" hidden>重试</button>`);
   $("#retry").onclick = async () => {
     await api("/api/retry", {});
@@ -547,7 +547,7 @@ async function pageStatus() {
     const r = await api("/api/uninstall", {});
     shell(-1, r.ok ? "已经卸载了" : "卸载没成功", r.ok ? "卸载流程已开始。" : "", r.ok ? `
       <div class="note">文件会在几秒内删干净。关掉这个窗口就行。<br>
-      想再装回来，重新双击一键包。</div>` : `<div class="msg bad" style="white-space:pre-wrap">${esc(r.message || "")}</div>`,
+      想再装回来，重新打开织灵安装程序。</div>` : `<div class="msg bad" style="white-space:pre-wrap">${esc(r.message || "")}</div>`,
       `<span></span><button class="primary" id="fin">关闭窗口</button>`);
     $("#fin").onclick = () => window.close();
   };
