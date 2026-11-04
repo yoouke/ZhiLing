@@ -92,6 +92,57 @@ class ServerTest(unittest.TestCase):
             release.set()
             self.app._agent_worker.join()
 
+    def test_finish_cannot_skip_incomplete_setup(self):
+        self.app._open(Path(self.install_root()))
+        code, response = self.call("/api/finish", {})
+        self.assertEqual(code, 200)
+        self.assertFalse(response["ok"])
+        self.assertEqual(self.app.mode, "install")
+
+    def test_finish_transitions_same_host_after_completed_setup(self):
+        import installer
+        import services
+        root = Path(self.install_root())
+        self.app._open(root)
+        layout = services.Layout(root)
+        for path in (layout.python, layout.astrbot / "main.py", layout.napcat / "node.exe",
+                     layout.pack / "settings/pack.json", layout.pack / "persona/character.md"):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("fixture", encoding="utf-8")
+        self.app.state.data.update(done=sorted(installer.SETUP_STEPS), keys_ok=True, profile={"name": "fixture"})
+        self.app.state.save()
+        self.app.installer = server.installer.Installer(root, self.app.state, steps=[])
+        token = self.app.token
+        _, response = self.call("/api/finish", {})
+        self.assertTrue(response["ok"])
+        _, info = self.call("/api/info")
+        self.assertEqual(info["mode"], "status")
+        self.assertEqual(self.app.token, token)
+
+    def test_resume_reuses_saved_root_without_resetting_progress(self):
+        root = Path(self.install_root())
+        self.app._open(root)
+        self.app.state.data["keys_ok"] = True
+        self.app.state.data["profile"] = {"name": "fixture"}
+        self.app.state.save()
+        # Reopening provides saved inputs to the existing pending pipeline.
+        self.app._open(root)
+        _, response = self.call("/api/resume", {})
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["resume"], {"keys": True, "profile": True})
+        self.assertEqual(self.app.root, root)
+        deadline = time.monotonic() + 2
+        while self.app.installer.progress()["running"] and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertTrue(self.app.installer.progress()["finished"])
+
+    def test_console_navigation_does_not_reveal_or_export_credentials(self):
+        self.app._open(Path(self.install_root()))
+        self.app.state.data["ports"] = {"dashboard": 6185, "napcat_webui": 6099}
+        _, result = self.call("/api/consoles")
+        self.assertEqual(result, {"dashboard_url": "http://127.0.0.1:6185", "napcat_url": "http://127.0.0.1:6099"})
+        self.assertFalse((self.app.root / "我的信息.txt").exists())
+
     def test_token_required(self):
         self.assertEqual(self.call("/api/info", token=False)[0], 403)
         self.assertEqual(self.call("/api/info")[0], 200)
@@ -210,7 +261,7 @@ class ServerTest(unittest.TestCase):
         self.assertTrue(r["ok"])
         self.assertEqual(called, [1])
 
-    def test_done_writes_info_file(self):
+    def test_credentials_are_not_written_as_plaintext_info_file(self):
         root = Path(self.install_root())
         self.call("/api/path", {"path": str(root)})
         self.app.state.data["ports"] = {"dashboard": 6185, "onebot": 6199, "napcat_webui": 6099}
@@ -218,7 +269,7 @@ class ServerTest(unittest.TestCase):
         _, r = self.call("/api/done")
         self.assertEqual(r["dashboard_url"], "http://127.0.0.1:6185")
         self.assertEqual(r["password"], "Pw123456")
-        self.assertIn("Pw123456", (root / "我的信息.txt").read_text(encoding="utf-8"))
+        self.assertFalse((root / "我的信息.txt").exists())
 
     def test_keys_blank_keeps_saved_one(self):
         """改设置时只改一项：留空的那几项要沿用已经存着的，不能被清空。"""
