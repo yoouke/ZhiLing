@@ -45,7 +45,7 @@ def main():
     notes = Path("release-notes.md")
     notes.write_text(f'''织灵 Windows 开发预览
 
-此安装包提供当前基础安装、角色提示词导入、QQ 连接配置、插件配置与 DSH 受管部署入口。安装包使用空白角色，由用户填写自己的角色资料。
+此版本采用新的织灵 Logo 和桌面界面。首次使用进入初始化向导，安装中断可继续，完成后进入日常工作台；后续启动直接检查服务并打开工作台。工作台提供运行概览、角色设定、模型服务、账号连接、Agent 任务和维护入口。安装包使用空白角色，由用户填写自己的角色资料。
 
 已执行：Windows 回归、真实引擎部署、成品压缩包校验、包内运行时首次启动、空白角色及本机接口认证检查。welcome.png 为该安装包在 Windows runner 的实际首次启动截图。
 
@@ -57,7 +57,7 @@ def main():
 构建记录：{build['html_url']}
 成品启动检查：{smoke['html_url']}
 ''', encoding="utf-8")
-    tag = "v0.1.0-dev"
+    tag = "v0.2.0-dev"
     # GitHub sanitizes names containing only non-ASCII characters. Publish a
     # stable ASCII filename while retaining the Chinese product label.
     public_installer = Path("ZhiLing.exe")
@@ -86,7 +86,7 @@ def main():
         subprocess.run(["gh", "release", "upload", tag, str(checksum), "--repo", repo, "--clobber"], check=True)
     else:
         subprocess.run(["gh", "release", "create", tag, "--repo", repo, "--target", build["head_sha"],
-                        "--draft", "--prerelease", "--title", "织灵 0.1.0 开发预览", "--notes-file", str(notes),
+                        "--draft", "--prerelease", "--title", "织灵 0.2.0 开发预览", "--notes-file", str(notes),
                         str(public_installer) + "#织灵 · Windows x64 安装程序", str(checksum), "candidate/BUILD_INFO.json",
                         "proof/SMOKE_REPORT.json", "proof/welcome.png"], check=True)
     subprocess.run(["gh", "release", "edit", tag, "--repo", repo, "--draft=false", "--notes-file", str(notes),

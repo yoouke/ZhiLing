@@ -56,7 +56,7 @@ def main():
                                      str(boot / "app/main.py"), "--no-window"],
                                     cwd=boot, env=env, stdout=log, stderr=log)
             try:
-                lock = base / "home/ZhiLing/wizard-install.lock"
+                lock = base / "home/ZhiLing/desktop.lock"
                 deadline = time.monotonic() + 45
                 while not lock.is_file():
                     if proc.poll() is not None:
