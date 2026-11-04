@@ -77,6 +77,21 @@ class ServerTest(unittest.TestCase):
     def install_root(self):
         return str(Path(self.tmp.name) / "DaFeiYu")
 
+    def test_deploying_agent_blocks_conflicting_lifecycle_commands(self):
+        self.app._open(Path(self.install_root()))
+        release = threading.Event()
+        self.app._agent_worker = threading.Thread(target=release.wait, daemon=True)
+        self.app._agent_worker.start()
+        try:
+            for endpoint in ("start", "stop", "apply", "switch_qq", "quit", "uninstall"):
+                code, response = self.call("/api/" + endpoint, {})
+                self.assertEqual(code, 200)
+                self.assertFalse(response["ok"], endpoint)
+            self.assertFalse(self.app.quitting)
+        finally:
+            release.set()
+            self.app._agent_worker.join()
+
     def test_token_required(self):
         self.assertEqual(self.call("/api/info", token=False)[0], 403)
         self.assertEqual(self.call("/api/info")[0], 200)
