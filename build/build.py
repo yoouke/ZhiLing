@@ -132,8 +132,8 @@ def assemble(stage: Path, dl: Path) -> None:
     shutil.copytree(ROOT / "app", layout.app,
                     ignore=lambda directory, names: [n for n in names if n == "__pycache__" or
                         (Path(directory).name == "img" and n.lower().endswith(".jpg"))])
-    for name in ("THIRD_PARTY_NOTICES.md", "README.md"):
-        shutil.copy2(ROOT / name, stage / name)
+    shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", stage / "THIRD_PARTY_NOTICES.md")
+    shutil.copy2(HERE / "installed-README.md", stage / "README.md")
     run([layout.python, "-m", "pip", "install", "-i", PYPI, "-r", layout.astrbot / "requirements.txt",
          "--no-warn-script-location"])
 
